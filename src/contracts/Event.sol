@@ -6,19 +6,22 @@ contract Color is ERC721 {
 
     enum States { Prep, Active, Open, Paused, Cancelled, Closed }
     // Ticket struct 
-    struct Ticket {
+    // struct Ticket {
 
-    }
+    // }
     int numTickets;
-    int ticketPrice;
+    int price;
     // For each user, store corresponding ticket struct
-    mapping(address => Ticket) tickets;
+    // mapping(address => Ticket) tickets;
     bool canBeResold;
-    address public manager;
+    address public owner;
 
-
-    constructor() public {
-
+    // Creates a new Event Contract
+    constructor(uint8 numTickets, uint8 price, bool canBeResold) public {
+        owner = msg.sender;
+        numTickets = numTickets;
+        price = price;
+        canBeResold = canBeResold;
     }
 
     // Functions here
