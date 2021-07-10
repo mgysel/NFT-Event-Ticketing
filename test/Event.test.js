@@ -1,4 +1,5 @@
-const { assert } = require('chai')
+const { assert, expect } = require('chai')
+const { truffleAssert } = require('truffle-assertions');
 const { contracts_build_directory } = require('../truffle-config')
 import Web3 from 'web3'
 
@@ -16,9 +17,23 @@ require('chai')
 // accounts - the accounts from Ganache
 // async - to interact with blockchain, must use async calls
 contract('Event', (accounts) => {
+    // Variables for creating the Event Contract
     let contract
+    const numTickets = 500;
+    const price = 50;
+    const canBeResold = true;
+    const royaltyPercent = 20;
+    const eventName = 'EventName'
+    const eventSymbol = 'EventSymbol'
+
+    // Variables for users from Ganache
+    const owner = accounts[0]
+    const buyer1 = accounts[1]
+    const buyer2 = accounts[2]
+
 
     beforeEach(async () => {
+        contract = await Event.new(numTickets, price, canBeResold, royaltyPercent, eventName, eventSymbol)
         contract = await Event.deployed()
     })
 
@@ -49,9 +64,6 @@ contract('Event', (accounts) => {
 
     describe('constructor', async () => {
         it('checking smart contract owner', async () => {
-            // Get first account from Ganache
-            const accounts = await web3.eth.getAccounts()
-            const owner = accounts[0]
             // Check that SC owner is first account from Ganache
             expect(await contract.owner()).to.be.eq(owner)
         })
@@ -79,8 +91,29 @@ contract('Event', (accounts) => {
             const royalty = await contract.royaltyPercent()
             expect(royalty).to.eql(expected)
         })
-
     })
 
+    describe('buyTicket', async () => {
+        // Buy Ticket Success
+        it('checking buyTicket', async () => {
+            // // Get first account from Ganache
+            // const accounts = await web3.eth.getAccounts()
+            // const owner = accounts[0]
+            // // Check that SC owner is first account from Ganache
+            // expect(await contract.owner()).to.be.eq(owner)
 
+            const ticket1 = await contract.buyTicket({ value: 100, from: buyer1 })
+            console.log(ticket1)
+            truffleAssert.eventEmitted(ticket1, 'CreateTicket', (event) => {
+                expect(event.owner).to.be.eq(buyer1)
+                expect(event.ticketId).to.be.eq(1)
+            })
+        })
+
+        // Not enough money
+
+        // Not enough tickets left
+
+        // numTicketsLeft Decrements
+    })
 })

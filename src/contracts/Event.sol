@@ -24,7 +24,7 @@ contract Event is ERC721 {
     address public owner;
 
     // EVENTS
-    event CreateNFTTicket(address buyer, uint NFTID);
+    event CreateTicket(address buyer, uint ticketID);
 
     // Creates a new Event Contract
     constructor(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent, string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
@@ -47,12 +47,12 @@ contract Event is ERC721 {
 
         // Store t in tickets array, reduce numTicketsLeft
         tickets.push(t);
-        uint NFTID = tickets.length;
+        uint ticketID = tickets.length;
         numTicketsLeft--;
 
         // Mint NFT
-        _mint(msg.sender, NFTID);
-        emit CreateNFTTicket(msg.sender, NFTID);
+        _mint(msg.sender, ticketID);
+        emit CreateTicket(msg.sender, ticketID);
     }
 
     // Set new stage
