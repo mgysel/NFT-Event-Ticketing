@@ -1,8 +1,8 @@
-// SPDX-License-Identifier: MIT
-pragma solidity >=0.6.0;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
-contract Color is ERC721 {
+contract Event is ERC721 {
 
     enum Stages { Prep, Active, Paused, CheckinOpen, Cancelled, Closed }
     Stages public stage = Stages.Prep;
@@ -25,11 +25,11 @@ contract Color is ERC721 {
     event CreateNFTTicket(address buyer, uint NFTID);
 
     // Creates a new Event Contract
-    constructor(uint numTickets, uint price, bool canBeResold) public {
+    constructor(uint _numTickets, uint _price, bool _canBeResold) ERC721("Event", "Symbol") {
         owner = msg.sender;
-        numTicketsLeft = numTickets;
-        price = price;
-        canBeResold = canBeResold;
+        numTicketsLeft = _numTickets;
+        price = _price;
+        canBeResold = _canBeResold;
     }
 
     // Customer purchases a ticket from Organizer
