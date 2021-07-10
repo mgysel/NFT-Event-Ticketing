@@ -1,5 +1,6 @@
 const { assert } = require('chai')
 const { contracts_build_directory } = require('../truffle-config')
+import Web3 from 'web3'
 
 // Import smart contract using its artifact
 const Event = artifacts.require('./Event')
@@ -9,7 +10,9 @@ require('chai')
     .use(require('chai-as-promised'))
     .should()
 
-// NOTE: THESE ARE SAMPLE TESTS
+
+// NOTE: ETHEREUM STORES BIG NUMBERS THAT JS CANNOT COMPILE,
+// FOLLOW THE describe('comparison') EXAMPLES FOR HOW TO COMPARE NUMBERS
 // accounts - the accounts from Ganache
 // async - to interact with blockchain, must use async calls
 contract('Event', (accounts) => {
@@ -34,16 +37,50 @@ contract('Event', (accounts) => {
         })
 
         // Test Event Name
-        it('Correct event name', async () => {
-            const name = await contract.name()
-            assert.equal(name, 'EventName')
+        it('checking event name', async () => {
+            expect(await contract.name()).to.be.eq('EventName')
         })
 
         // Test Event Symbol
-        it('Correct event symbol', async () => {
-            const symbol = await contract.symbol()
-            assert.equal(symbol, 'EventSymbol')
+        it('checking event symbol', async () => {
+            expect(await contract.symbol()).to.be.eq('EventSymbol')
         })
     })
+
+    describe('constructor', async () => {
+        it('checking smart contract owner', async () => {
+            // Get first account from Ganache
+            const accounts = await web3.eth.getAccounts()
+            const owner = accounts[0]
+            // Check that SC owner is first account from Ganache
+            expect(await contract.owner()).to.be.eq(owner)
+        })
+
+        it('checking numTicketsLeft set correctly', async () => {
+            const expected = web3.utils.toBN('500')
+            const numTicketsLeft = await contract.numTicketsLeft()
+            expect(numTicketsLeft).to.eql(expected)
+        })
+
+        it('checking price set correctly', async () => {
+            const expected = web3.utils.toBN('50')
+            const price = await contract.price()
+            expect(price).to.eql(expected)
+        })
+
+        it('checking canBeResold set correctly', async () => {
+            // Get first account from Ganache
+            expect(await contract.canBeResold()).to.be.eq(true)
+        })
+
+        it('checking royaltyPercent set correctly', async () => {
+            // Get first account from Ganache
+            const expected = web3.utils.toBN('20')
+            const royalty = await contract.royaltyPercent()
+            expect(royalty).to.eql(expected)
+        })
+
+    })
+
 
 })

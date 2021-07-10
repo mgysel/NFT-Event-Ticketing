@@ -9,25 +9,25 @@ contract Event is ERC721 {
     // Ticket struct 
     struct Ticket {
         address owner;
-        uint price;
+        uint32 price;
         bool forSale;
         bool used;
     }
     Ticket[] tickets; 
-    uint numTicketsLeft;
-    uint price;
+    uint32 public numTicketsLeft;
+    uint32 public price;
     // Percent royalty event creator receives from ticket resales
-    uint royaltyPercent;
+    uint32 public royaltyPercent;
     // For each user, store corresponding ticket struct
     // mapping(address => Ticket) tickets;
-    bool canBeResold;
+    bool public canBeResold;
     address public owner;
 
     // EVENTS
     event CreateNFTTicket(address buyer, uint NFTID);
 
     // Creates a new Event Contract
-    constructor(uint _numTickets, uint _price, bool _canBeResold, uint _royaltyPercent) ERC721("EventName", "EventSymbol") {
+    constructor(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent, string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
         owner = msg.sender;
         numTicketsLeft = _numTickets;
         price = _price;
