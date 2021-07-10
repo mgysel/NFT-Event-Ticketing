@@ -23,7 +23,7 @@ contract('Event', (accounts) => {
     describe('deployment', async () => {
         // Test address
         // it containts test examples
-        it('deploys successfully', async () => {
+        it('Event contract deploys successfully', async () => {
             // NOTE: can only use await inside of an async function call
             // Make sure deployed contract exists by ensuring not an empty string
             const address = contract.address
@@ -34,13 +34,13 @@ contract('Event', (accounts) => {
         })
 
         // Test Event Name
-        it('has a name', async () => {
+        it('Correct event name', async () => {
             const name = await contract.name()
             assert.equal(name, 'EventName')
         })
 
         // Test Event Symbol
-        it('has a symbol', async () => {
+        it('Correct event symbol', async () => {
             const symbol = await contract.symbol()
             assert.equal(symbol, 'EventSymbol')
         })
