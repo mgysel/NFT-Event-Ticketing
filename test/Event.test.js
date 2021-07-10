@@ -15,7 +15,7 @@ require('chai')
 contract('Event', (accounts) => {
     let contract
 
-    before(async () => {
+    beforeEach(async () => {
         contract = await Event.deployed()
     })
 
@@ -33,16 +33,16 @@ contract('Event', (accounts) => {
             assert.notEqual(address, undefined)
         })
 
-        // Test name 
+        // Test Event Name
         it('has a name', async () => {
             const name = await contract.name()
-            assert.equal(name, 'Color')
+            assert.equal(name, 'EventName')
         })
 
-        // Test symbol
+        // Test Event Symbol
         it('has a symbol', async () => {
             const symbol = await contract.symbol()
-            assert.equal(symbol, 'COLOR')
+            assert.equal(symbol, 'EventSymbol')
         })
     })
 
