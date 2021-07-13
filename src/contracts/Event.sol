@@ -56,7 +56,7 @@ contract Event is ERC721 {
     }
 
     // Set new stage
-    function setStage(Stages _stage) public {
+    function setStage(Stages _stage) public restricted {
         stage = _stage;
     }
 
@@ -64,6 +64,12 @@ contract Event is ERC721 {
 
 
     // MODIFIERS
+
+    // Only owner
+    modifier restricted() {
+        require(msg.sender == owner, "Can only be executed by the manager");
+        _;
+    }
 
     // Requires stage to be _stage
     modifier requiredStage(Stages _stage) {

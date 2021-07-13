@@ -7,7 +7,7 @@ module.exports = async function(deployer) {
   // deploy Event
 	// We do this using the Truffle deployer
 	// NOTE: await causes js to wait until the promise returns a result
-  const numTickets = 500;
+  const numTickets = 5;
   const price = 50;
   const canBeResold = true;
   const royaltyPercent = 20;
