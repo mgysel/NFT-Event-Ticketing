@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 contract Event is ERC721 {
 
@@ -25,6 +26,8 @@ contract Event is ERC721 {
 
     // EVENTS
     event CreateTicket(address buyer, uint ticketID);
+    event TicketForSale(address seller, uint ticketID, uint32 price);
+    event TicketSaleCancelled(address seller, uint ticketID);
 
     // Creates a new Event Contract
     constructor(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent, string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
@@ -54,6 +57,20 @@ contract Event is ERC721 {
         _mint(msg.sender, ticketID);
         emit CreateTicket(msg.sender, ticketID);
     }
+
+    // Set ticket for sale
+    function setTicketForSale(uint ticketID, uint32 newPrice) public requiredStage(Stages.Active) ticketNotUsed(ticketID) isTicketOwner(ticketID) {
+        tickets[ticketID].forSale = true;
+        tickets[ticketID].price = newPrice;
+        emit TicketForSale(msg.sender, ticketID, newPrice);
+    }
+
+    // Cancel Ticket Sale
+    function cancelSale(uint ticketID) public requiredStage(Stages.Active) isTicketOwner(ticketID) {
+        tickets[ticketID].forSale = false;
+        emit TicketSaleCancelled(msg.sender, ticketID);
+    }
+    
 
     // Set new stage
     function setStage(Stages _stage) public restricted {
@@ -87,5 +104,16 @@ contract Event is ERC721 {
         require(money >= price);
         _;
     }
+
+    modifier ticketNotUsed(uint ticketID) {
+        require(tickets[ticketID].used == false, "ticket has been used");
+        _;
+    }
+
+    modifier isTicketOwner(uint ticketID) {
+        require(ownerOf(ticketID) == msg.sender, "only ticket owner can sell");
+        _;
+    }
+
 
 }
