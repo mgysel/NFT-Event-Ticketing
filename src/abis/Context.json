@@ -467,7 +467,11 @@
   },
   "networks": {},
   "schemaVersion": "3.4.1",
+<<<<<<< HEAD
+  "updatedAt": "2021-07-13T09:09:20.606Z",
+=======
   "updatedAt": "2021-07-10T07:43:29.126Z",
+>>>>>>> origin/master
   "devdoc": {
     "kind": "dev",
     "methods": {},
