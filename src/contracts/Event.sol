@@ -25,6 +25,7 @@ contract Event is ERC721 {
 
     // EVENTS
     event CreateNFTTicket(address buyer, uint NFTID);
+    event TicketSold(address seller, address buyer, uint ticketID);
 
     // Creates a new Event Contract
     constructor(uint _numTickets, uint _price, bool _canBeResold, uint _royaltyPercent) ERC721("EventName", "EventSymbol") {
@@ -55,6 +56,18 @@ contract Event is ERC721 {
         emit CreateNFTTicket(msg.sender, NFTID);
     }
 
+    function buyTicketFromUser(address userAdd, uint ticketID) public payable requiredStage(Stages.Active) hasEnoughMoney(msg.value) canBeSold(ticketID) {
+        address payable seller = payable(userAdd);
+
+        uint ticketPrice = tickets[ticketID].price;
+        uint royalty = (royaltyPercent/100) * ticketPrice;
+        uint priceToPay = ticketPrice - royalty;
+
+        seller.transfer(priceToPay);
+        tickets[ticketID].forSale = false;
+        emit TicketSold(seller, msg.sender, ticketID);
+    }
+
     // Set new stage
     function setStage(Stages _stage) public {
         stage = _stage;
@@ -79,6 +92,11 @@ contract Event is ERC721 {
 
     modifier hasEnoughMoney(uint money) {
         require(money >= price);
+        _;
+    }
+
+    modifier canBeSold(uint ticketID) {
+        require(tickets[ticketID].forSale == true, "ticket not for sale");
         _;
     }
 
