@@ -135,6 +135,24 @@ contract('Event', (accounts) => {
             })
         })
 
+        it('checking SC balance increases after ticket purchase', async () => {
+            let balanceBefore = parseInt(await web3.eth.getBalance(event.address))
+            let ticket1 = await event.buyTicket({ value: _price, from: buyer1 })
+            let balanceAfter = parseInt(await web3.eth.getBalance(event.address))
+
+            expect(parseInt(balanceBefore) + _price).to.eql(parseInt(balanceAfter))
+
+        })
+
+        it('checking buyer balance decreases after ticket purchase', async () => {
+            let balanceBefore = parseInt(await web3.eth.getBalance(buyer1))
+            let ticket1 = await event.buyTicket({ value: _price, from: buyer1 })
+            let balanceAfter = parseInt(await web3.eth.getBalance(buyer1))
+
+            expect(balanceBefore - _price).to.be.greaterThan(balanceAfter)
+
+        })
+
         it('checking not enough money to buy ticket', async () => {
             await event.buyTicket({ value: (_price - 1), from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
         })
@@ -156,6 +174,16 @@ contract('Event', (accounts) => {
             await event.buyTicket({ value: (_price), from: buyer1 })
             await event.buyTicket({ value: (_price), from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
         })
+
+    })
+
+    // Factory Tests
+    describe('factoryContract', async () => {
+
+        beforeEach(async () => {
+            factory = await Factory.new(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
+        })
+
 
     })
 })
