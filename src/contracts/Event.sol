@@ -22,9 +22,14 @@ contract Event is ERC721 {
     // mapping(address => Ticket) tickets;
     bool canBeResold;
     address public owner;
+    
+    // to store the balances for buyers and organizers
+    mapping(address => uint256) balances;
 
     // EVENTS
     event CreateNFTTicket(address buyer, uint NFTID);
+    event WithdrawalMoney(address receiver, uint money);
+    event Refund(address organizer, address receiver, uint money);
 
     // Creates a new Event Contract
     constructor(uint _numTickets, uint _price, bool _canBeResold, uint _royaltyPercent) ERC721("EventName", "EventSymbol") {
@@ -49,6 +54,9 @@ contract Event is ERC721 {
         tickets.push(t);
         uint NFTID = tickets.length;
         numTicketsLeft--;
+        
+        // new added
+        balances[owner] += price;
 
         // Mint NFT
         _mint(msg.sender, NFTID);
@@ -61,6 +69,24 @@ contract Event is ERC721 {
     }
 
 
+    // once the event is cancelled, organizer should refund money to buyers
+    function refund(address receiver, uint money) public isOrganizer returns (bool success){
+        require (money > 0);
+        require(balances[msg.sender] >= money, "Not enough money");
+        emit Refund(msg.sender, receiver, money);
+        balances[msg.sender] -= money;
+        balances[receiver] += money;
+        return true;
+    }
+    
+    
+    // for user and organizer to  withdrawal money from their account
+    function withdrawal(uint money) public returns (bool success){
+        require(balances[msg.sender] >= money, "Not enough money");
+        emit WithdrawalMoney(msg.sender, money);
+        balances[msg.sender] -= money;
+        return true;
+    }
 
 
     // MODIFIERS
@@ -81,5 +107,10 @@ contract Event is ERC721 {
         require(money >= price);
         _;
     }
-
+    
+    modifier isOrganizer () {
+        require (msg.sender == owner , "Can only be executed by the organizer");
+        _;
+    }
 }
+
