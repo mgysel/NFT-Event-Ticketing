@@ -8,7 +8,7 @@ contract EventCreator {
     address[] public events;
 
     // Return number of contracts
-    function getEventCount() public returns(uint contractCount) {
+    function getEventCount() public view returns(uint contractCount) {
         return events.length;
     }
 
@@ -37,6 +37,7 @@ contract Event is ERC721 {
         address owner;
         uint32 price;
         bool forSale;
+        uint32 resalePrice;
         bool used;
     }
     Ticket[] tickets; 
@@ -48,9 +49,14 @@ contract Event is ERC721 {
     // mapping(address => Ticket) tickets;
     bool public canBeResold;
     address public owner;
+    
+    // to store the balances for buyers and organizers
+    mapping(address => uint256) balances;
 
     // EVENTS
     event CreateTicket(address buyer, uint ticketID);
+    event WithdrawalMoney(address receiver, uint money);
+    event Refund(address organizer, address receiver, uint money);
 
     // Creates a new Event Contract
     // constructor(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent, string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
@@ -75,6 +81,7 @@ contract Event is ERC721 {
         Ticket memory t;
         t.owner = msg.sender;
         t.price = price;
+        t.resalePrice = price;
         t.forSale = false;
         t.used = false;
 
@@ -82,6 +89,9 @@ contract Event is ERC721 {
         tickets.push(t);
         uint ticketID = tickets.length;
         numTicketsLeft--;
+        
+        // new added
+        balances[owner] += price;
 
         // Mint NFT
         _mint(msg.sender, ticketID);
@@ -93,11 +103,32 @@ contract Event is ERC721 {
         stage = _stage;
     }
 
+
+    // once the event is cancelled, organizer should refund money to buyers
+    function refund(address receiver, uint money) public restricted returns (bool success){
+        require (money > 0);
+        require(balances[msg.sender] >= money, "Not enough money");
+        emit Refund(msg.sender, receiver, money);
+        balances[msg.sender] -= money;
+        balances[receiver] += money;
+        return true;
+    }
+    
+    
+    // for user and organizer to  withdrawal money from their account
+    function withdrawal(uint money) public returns (bool success){
+        require(balances[msg.sender] >= money, "Not enough money");
+        emit WithdrawalMoney(msg.sender, money);
+        balances[msg.sender] -= money;
+        return true;
+    }
+
+
     // MODIFIERS
 
     // Only owner
     modifier restricted() {
-        require(msg.sender == owner, "Can only be executed by the manager");
+        require(msg.sender == owner, "Can only be executed by the owner");
         _;
     }
 
@@ -117,5 +148,6 @@ contract Event is ERC721 {
         require(money >= price);
         _;
     }
-
+    
 }
+

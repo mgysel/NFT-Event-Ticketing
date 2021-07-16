@@ -2,7 +2,6 @@ const { assert, expect } = require('chai')
 const BN = require('bn.js')
 const { contracts_build_directory } = require('../truffle-config')
 const truffleAssert = require('truffle-assertions')
-import Web3 from 'web3'
 
 const EVM_REVERT = 'VM Exception while processing transaction: revert'
 
