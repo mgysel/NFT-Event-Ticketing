@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 contract EventCreator {
 
     // Created contracts
-    address[] public events;
+    Event[] public events;
 
     // Return number of contracts
     function getEventCount() public view returns(uint contractCount) {
@@ -14,18 +14,24 @@ contract EventCreator {
 
     // deploy a new event contract
     //function createEvent(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent, string memory _eventName, string memory _eventSymbol) 
-    function createEvent() 
-        public 
-        returns(address newContract)
-    {
+    function createEvent(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent, string memory _eventName, string memory _eventSymbol) external returns(address newContract) {
         // Create a new Event smart contract
         // NOTE: 'new' keyword creates a new SC and returns address
         //Event e = new Event(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol);
-        Event e = new Event();
+        Event e = new Event(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol);
         // Store/return event address
-        events.push(address(e));
+        events.push(e);
         return address(e);
     }
+
+    function getEvents() external view returns(Event[] memory _events) {
+        _events = new Event[] (events.length);
+        for (uint i=0; i<events.length; i++){
+            _events[i] = events[i];
+        }
+
+        return _events;
+    }  
 }
 
 contract Event is ERC721 {
@@ -59,20 +65,20 @@ contract Event is ERC721 {
     event Refund(address organizer, address receiver, uint money);
 
     // Creates a new Event Contract
-    // constructor(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent, string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
-    //     owner = msg.sender;
-    //     numTicketsLeft = _numTickets;
-    //     price = _price;
-    //     canBeResold = _canBeResold;
-    //     royaltyPercent = _royaltyPercent;
-    // }
-    constructor() ERC721('Hello', 'Hello') {
-        // owner = msg.sender;
-        // numTicketsLeft = _numTickets;
-        // price = _price;
-        // canBeResold = _canBeResold;
-        // royaltyPercent = _royaltyPercent;
+    constructor(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent, string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
+        owner = msg.sender;
+        numTicketsLeft = _numTickets;
+        price = _price;
+        canBeResold = _canBeResold;
+        royaltyPercent = _royaltyPercent;
     }
+    // constructor() ERC721('Hello', 'Hello') {
+    //     // owner = msg.sender;
+    //     // numTicketsLeft = _numTickets;
+    //     // price = _price;
+    //     // canBeResold = _canBeResold;
+    //     // royaltyPercent = _royaltyPercent;
+    // }
 
     // Customer purchases a ticket from Organizer
     // Checks: State is Active, has enough money, 
