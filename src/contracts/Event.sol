@@ -11,6 +11,7 @@ contract Event is ERC721 {
         address owner;
         uint32 price;
         bool forSale;
+        uint32 resalePrice;
         bool used;
     }
     Ticket[] tickets; 
@@ -42,6 +43,7 @@ contract Event is ERC721 {
         Ticket memory t;
         t.owner = msg.sender;
         t.price = price;
+        t.resalePrice = price;
         t.forSale = false;
         t.used = false;
 
