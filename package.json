@@ -12,7 +12,6 @@
     "babel-preset-stage-3": "6.24.1",
     "babel-register": "6.26.0",
     "bootstrap": "4.3.1",
-    "chai": "4.2.0",
     "chai-as-promised": "7.1.1",
     "chai-bignumber": "3.0.0",
     "package.json": "^2.0.1",
@@ -37,5 +36,10 @@
     "not dead",
     "not ie <= 11",
     "not op_mini all"
-  ]
+  ],
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "chai-bn": "^0.2.2",
+    "truffle-assertions": "^0.9.2"
+  }
 }

@@ -9,30 +9,30 @@ contract Event is ERC721 {
     // Ticket struct 
     struct Ticket {
         address owner;
-        uint price;
+        uint32 price;
         bool forSale;
         bool used;
     }
     Ticket[] tickets; 
-    uint numTicketsLeft;
-    uint price;
+    uint32 public numTicketsLeft;
+    uint32 public price;
     // Percent royalty event creator receives from ticket resales
-    uint royaltyPercent;
+    uint32 public royaltyPercent;
     // For each user, store corresponding ticket struct
     // mapping(address => Ticket) tickets;
-    bool canBeResold;
+    bool public canBeResold;
     address public owner;
     
     // to store the balances for buyers and organizers
     mapping(address => uint256) balances;
 
     // EVENTS
-    event CreateNFTTicket(address buyer, uint NFTID);
+    event CreateTicket(address buyer, uint ticketID);
     event WithdrawalMoney(address receiver, uint money);
     event Refund(address organizer, address receiver, uint money);
 
     // Creates a new Event Contract
-    constructor(uint _numTickets, uint _price, bool _canBeResold, uint _royaltyPercent) ERC721("EventName", "EventSymbol") {
+    constructor(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent, string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
         owner = msg.sender;
         numTicketsLeft = _numTickets;
         price = _price;
@@ -52,25 +52,25 @@ contract Event is ERC721 {
 
         // Store t in tickets array, reduce numTicketsLeft
         tickets.push(t);
-        uint NFTID = tickets.length;
+        uint ticketID = tickets.length;
         numTicketsLeft--;
         
         // new added
         balances[owner] += price;
 
         // Mint NFT
-        _mint(msg.sender, NFTID);
-        emit CreateNFTTicket(msg.sender, NFTID);
+        _mint(msg.sender, ticketID);
+        emit CreateTicket(msg.sender, ticketID);
     }
 
     // Set new stage
-    function setStage(Stages _stage) public {
+    function setStage(Stages _stage) public restricted {
         stage = _stage;
     }
 
 
     // once the event is cancelled, organizer should refund money to buyers
-    function refund(address receiver, uint money) public isOrganizer returns (bool success){
+    function refund(address receiver, uint money) public restricted returns (bool success){
         require (money > 0);
         require(balances[msg.sender] >= money, "Not enough money");
         emit Refund(msg.sender, receiver, money);
@@ -91,6 +91,12 @@ contract Event is ERC721 {
 
     // MODIFIERS
 
+    // Only owner
+    modifier restricted() {
+        require(msg.sender == owner, "Can only be executed by the owner");
+        _;
+    }
+
     // Requires stage to be _stage
     modifier requiredStage(Stages _stage) {
         require(stage == _stage);
@@ -108,9 +114,5 @@ contract Event is ERC721 {
         _;
     }
     
-    modifier isOrganizer () {
-        require (msg.sender == owner , "Can only be executed by the organizer");
-        _;
-    }
 }
 

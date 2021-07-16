@@ -922,7 +922,11 @@
   },
   "networks": {},
   "schemaVersion": "3.4.1",
+<<<<<<< HEAD
   "updatedAt": "2021-07-13T09:09:20.314Z",
+=======
+  "updatedAt": "2021-07-10T07:43:29.113Z",
+>>>>>>> origin/master
   "devdoc": {
     "details": "See https://eips.ethereum.org/EIPS/eip-721",
     "kind": "dev",
