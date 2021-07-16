@@ -94,6 +94,7 @@ contract('Event', (accounts) => {
             const royalty = await event.royaltyPercent()
             expect(royalty).to.eql(expected)
         })
+
     })
 
     describe('buyTicket', async () => {
