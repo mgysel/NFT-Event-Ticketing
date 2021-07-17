@@ -9,6 +9,8 @@ import sys
 from flask.json import jsonify
 import json
 from flask.helpers import make_response
+import pymongo
+from pymongo import MongoClient
 
 
 APP = Flask(__name__)
@@ -17,8 +19,10 @@ CORS(APP)
 
 APP.config['SECRET_KEY'] = 'your secret key'
 
-
-
+# Connect to MongoDB
+client = MongoClient("mongodb+srv://Pramith:pramith123@cluster0.fv4q5.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
+print("Connection Successfull");
+db = client.get_database('test')
 
 ########## EVENT ROUTES ##########
 
@@ -29,8 +33,8 @@ def event_add():
     Adds event to database
     '''
     data = request.get_json()
-    result = add_event(data, APP.secret_key)
-    return result
+    # result = add_event(data, APP.secret_key)
+    return
 
 @APP.route('/event/<event_id>', methods=['GET'])
 def event_get():
@@ -38,8 +42,8 @@ def event_get():
     Returns an event given an event ID
     '''
     data = request.get_json()
-    result = get_event(data, APP.secret_key)
-    return result
+    # result = get_event(data, APP.secret_key)
+    return
 
 
 
@@ -53,8 +57,8 @@ def event_get():
     Adds ticket to database
     '''
     data = request.get_json()
-    result = add_ticket(data, APP.secret_key)
-    return result
+    # result = add_ticket(data, APP.secret_key)
+    return
 
 @APP.route('/tickets/<user_id>', methods=['GET'])
 def event_get():
@@ -63,8 +67,8 @@ def event_get():
     Adds ticket to database
     '''
     data = request.get_json()
-    result = get_ticket(data, APP.secret_key)
-    return result
+    # result = get_ticket(data, APP.secret_key)
+    return
 
 
 
@@ -77,8 +81,8 @@ def register_user():
     Registers a user
     '''
     data = request.get_json()
-    result = auth_register(data, APP.secret_key)
-    return result
+    # result = auth_register(data, APP.secret_key)
+    return 
 
 @APP.route('/auth/login', methods=['POST'])
 def login_user():
@@ -86,8 +90,8 @@ def login_user():
     Logs in a user
     '''
     data = request.get_json()
-    result = auth_login(data, APP.secret_key)
-    return result
+    # result = auth_login(data, APP.secret_key)
+    return 
 
 
 if __name__ == "__main__":
