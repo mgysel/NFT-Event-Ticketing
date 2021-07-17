@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import Web3 from 'web3'
 import './App.css';
 import Event from '../abis/Event.json';
@@ -7,66 +7,50 @@ import EventCreator from '../abis/EventCreator.json'
 // import detectEthereumProvider from '@metamask/detect-provider';
 
 
-class App extends Component {
+function App() {
+  //const [web3, setWeb3] = useState("undefined");
+  const [account, setAccount] = useState("");
+  const [balance, setBalance] = useState(0);
+  const [eventCreator, setEventCreator] = useState("");
+  const [eventCreatorAddress, setEventCreatorAddress] = useState("");
+  const [eventContracts, setEventContracts] = useState([]);
+  const [eventAddresses, setEventAddresses] = useState([]);
+  const [eventData, setEventData] = useState([]);
+
+  const [formEventName, setFormEventName] = useState("");
+  const [formEventSymbol, setFormEventSymbol] = useState("");
+  const [formNumTickets, setFormNumTickets] = useState("");
+  const [formPrice, setFormPrice] = useState("");
+  const [formCanBeResold, setFormCanBeResold] = useState("");
+  const [formRoyaltyPercent, setFormRoyaltyPercent] = useState("");
+
+  
   // Connect app to blockchain with web3
   // componentWillMount always gets called when this component gets attached to DOM
-  async componentWillMount() {
-    //await this.loadWeb3()
-    await this.loadBlockchainData()
+  useEffect(() => {
+    async function componentDidMount() {
+      //await this.loadWeb3()
+      await loadBlockchainData()
+      //await this.getEvents()
 
-    //await this.getEvents()
-
-    if (typeof window.ethereum !== 'undefined') {
-      console.log('MetaMask is installed!');
-    } else {
-      window.alert('Non-Ethereum browser detected. Please install MetaMask!')
+      if (typeof window.ethereum !== 'undefined') {
+        console.log('MetaMask is installed!');
+      } else {
+        window.alert('Non-Ethereum browser detected. Please install MetaMask!')
+      }
     }
 
-    //const accounts = web3.eth.accounts;
-    const accounts = await window.ethereum.request({ method: 'eth_accounts' })
-  }
+    componentDidMount()
+  }, [])
 
-
-  // // Connect to a specific SC
-  // async loadBlockchainData() {
-  //   const web3 = window.web3
-  //   const ethereum = window.ethereum
-    
-  //   // Load metamask accounts
-  //   //const accounts = await web3.eth.getAccounts()
-  //   const accounts = await ethereum.request({ method: 'eth_accounts' })
-  //   console.log(accounts[0])
-  //   this.setState({ account: accounts[0] })
-
-  //   const networkId = await ethereum.request({ method: 'net_version' })
-  //   const networkData = Event.networks[networkId]
-  //   console.log("NETWORK DATA")
-  //   console.log(networkData)
-
-  //   // Protect against SC data not being deployed to network
-  //   if(networkData) {
-  //     // Need contract abi and address to connect
-  //     // NOTE: SHOULD STORE THESE IN DB?
-  //     const abi = Event.abi
-  //     const address = networkData.address
-  //     // const address = '0x0d7f7Ec806f5a24F519eaC6F2783a98738EDeeFD'
-  //     const contract = new web3.eth.Contract(abi, address)
-  //     this.setState({ contract })
-  
-  //     // Load Event Data
-
-  //   } else {
-  //     window.alert('Smart contract not deployed to detected network.')
-  //   }
-  // }
-
-  async loadBlockchainData(dispatch) {
+  async function loadBlockchainData() {
     if (typeof window.ethereum !== 'undefined') {
       // Connect to blockchain
       const web3 = new Web3(window.ethereum)
+      console.log("WEB3")
+      console.log(web3)
 
       // User must now allow for connection
-      const ethereum = new Web3(window.ethereum)
       await window.ethereum.enable()
 
       // Get Account, make sure there is a connection
@@ -74,77 +58,49 @@ class App extends Component {
       if (typeof accounts[0] !== 'undefined') {
         const netId = await web3.eth.net.getId()
         const balance = await web3.eth.getBalance(accounts[0])
-        this.setState({ 
-          account: accounts[0],
-          web3: web3,
-          balance: balance
-        })
+        console.log("NETID")
+        console.log(netId)
+        setAccount(accounts[0])
+        //setWeb3(web3)
+        setBalance(balance)
 
         // Load Event Creator
         try {
-          console.log("EVENT CREATOR ADDRESS")
-          console.log(EventCreator.networks[netId].address)
           const eventCreator = new web3.eth.Contract(EventCreator.abi, EventCreator.networks[netId].address)
-          this.setState({
-            eventCreator: eventCreator
-          })
+          setEventCreator(eventCreator)
+  
+          // Store event addresses in eventAddresses
+          const eventAddresses = await eventCreator.methods.getEvents().call()
+          console.log("EVENT ADDRESSES")
+          console.log(eventAddresses)
+          setEventAddresses(eventAddresses)
+
+          // Create event contract from each event address, store in eventContracts
+          // Get event data from each event contract, store in eventData
+          for (var i = 0; i < eventAddresses.length; i++) {
+            console.log(eventAddresses[i])
+            const thisEventContract = new web3.eth.Contract(Event.abi, eventAddresses[i])
+            eventContracts.push(thisEventContract)
+
+            const thisEventData = {}
+            thisEventData['eventName'] = await thisEventContract.methods.name().call()
+            thisEventData['eventSymbol'] = await thisEventContract.methods.symbol().call()
+            thisEventData['numTicketsLeft'] = await thisEventContract.methods.numTicketsLeft().call()
+            thisEventData['price'] = await thisEventContract.methods.price().call()
+            thisEventData['canBeResold'] = await thisEventContract.methods.canBeResold().call()
+            thisEventData['royaltyPercent'] = await thisEventContract.methods.royaltyPercent().call()
+            console.log("THIS EVENT DATA")
+            console.log(thisEventData)
+            eventData.push(thisEventData)
+          }
+
+          console.log(eventData[0].eventName)
+
+
         } catch(e) {
           console.log('Error', e)
           window.alert('Contracts not deployed to the current network')
         }
-
-        // Load Events
-        // Store event addresses in eventAddresses
-        const eventAddresses = await this.state.eventCreator.methods.getEvents().call()
-        console.log("EVENT ADDRESSES")
-        console.log(eventAddresses)
-        this.setState({
-          eventAddresses: eventAddresses
-        })
-
-        // Create event contract from each event address, store in eventContracts
-        // Get event data from each event contract, store in eventData
-        for (var i = 0; i < this.state.eventAddresses.length; i++) {
-          console.log(this.state.eventAddresses[i])
-          const thisEventContract = new web3.eth.Contract(Event.abi, this.state.eventAddresses[i])
-          this.state.eventContracts.push(thisEventContract)
-
-          const thisEventData = {}
-          thisEventData['eventName'] = await thisEventContract.methods.name().call()
-          thisEventData['eventSymbol'] = await thisEventContract.methods.symbol().call()
-          thisEventData['numTicketsLeft'] = await thisEventContract.methods.numTicketsLeft().call()
-          thisEventData['price'] = await thisEventContract.methods.price().call()
-          thisEventData['canBeResold'] = await thisEventContract.methods.canBeResold().call()
-          thisEventData['royaltyPercent'] = await thisEventContract.methods.royaltyPercent().call()
-          console.log("THIS EVENT DATA")
-          console.log(thisEventData)
-          this.state.eventData.push(thisEventData)
-          
-        }
-
-        // // Create event contracts, store in state
-        // var eventAddress
-        // for (eventAddress in this.state.events) {
-        //   console.log("EVENT ADDRESS")
-        //   console.log(eventAddress)
-        //   const thisEvent = new web3.eth.Contract(Event.abi, eventAddress)
-        //   const thisEventName = await thisEvent.methods.name().call()
-        //   console.log("THIS EVENT NAME")
-        //   console.log(thisEventName)
-        //   this.state.events.push(thisEvent)
-        // }
-        
-        // const thisEventName = await thisEvent.methods.name().call()
-        // console.log("THIS EVENT NAME")
-        // console.log(thisEventName)
-        // console.log("EVENT NAMES")
-        // console.log(this.state.events)
-        // var ec
-        // for (ec in this.state.events) {
-        //   console.log(await ec.methods.name().call())
-        // }
-
-
       }
     } else {
       window.alert('Please install MetaMask')
@@ -152,27 +108,13 @@ class App extends Component {
 
   }
 
-  async getEvents() {
-    // Get Events
-    const events = await this.state.eventCreator.methods.getEvents().call()
-    console.log(events)
 
-    // TODO: Reload events here
-    // Get data for each event
-    // const thisEvent = new web3.eth.Contract(Event.abi, events[0])
-    // const thisEventName = await thisEvent.methods.getName().call()
-    // console.log("THIS EVENT NAME")
-    // console.log(thisEventName)
-
-  }
-
-
-  async createEvent(e, eventName, eventSymbol, numTickets, price, canBeResold, royaltyPercent) {
+  async function createEvent(e) {
     // Check that eventCreator
-    if (this.state.eventCreator !== 'undefined') {
+    if (eventCreator !== 'undefined') {
       try {
-        console.log(this.state.account)
-        await this.state.eventCreator.methods.createEvent(numTickets, price, canBeResold, royaltyPercent, eventName, eventSymbol).send({ from: this.state.account })
+        console.log(account)
+        await eventCreator.methods.createEvent(formNumTickets, formPrice, formCanBeResold, formRoyaltyPercent, formEventName, formEventSymbol).send({ from: account })
       
       } catch(e) {
         console.log('Create Event error: ', e)
@@ -181,40 +123,14 @@ class App extends Component {
   }
 
 
-
-  // async createEvent(e) {
-  //   e.preventDefault()
-  //   console.log("CREATE EVENT")
-
-  //   // Deploy smart contract
-  // }
-
-
-  constructor(props) {
-    super(props)
-    this.state = {
-      web3: 'undefined',
-      account: '',
-      eventCreator: null,
-      eventCreatorAddress: '',
-      eventContracts: [],
-      eventAddresses: [],
-      eventData: []
-    }
-  }
-
-  render() {
     return (
       <div>
         <nav className="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
-          <a
-            className="navbar-brand col-sm-3 col-md-2 mr-0"
-            href=""
-            target="_blank"
-            rel="noopener noreferrer"
+          <p
+            className="navbar-brand col-sm-3 col-md-2 mr-0 mb-0"
           >
             TicketChain
-          </a>
+          </p>
         </nav>
         <div className="container-fluid mt-5">
           <div className="row">
@@ -223,57 +139,51 @@ class App extends Component {
                 <h1>Create an Event Now</h1>
                   <form onSubmit={(e) => {
                       e.preventDefault()
-                      let eventName = this.name.value
-                      let eventSymbol = this.symbol.value 
-                      let numTickets = this.numTickets.value 
-                      let price = this.price.value
-                      let canBeResold = (this.canBeResold.value === 'true')
-                      let royaltyPercent = this.royaltyPercent.value
-                      this.createEvent(e, eventName, eventSymbol, numTickets, price, canBeResold, royaltyPercent)
+                      createEvent(e)
                   }}>
                   <div className='form-group mr-sm-2'>
                   <br></br>
                     <input
                       id='name'
                       type='text'
-                      ref={(input) => { this.name = input }}
                       className="form-control form-control-md mb-2"
                       placeholder='Event name'
+                      onChange={(e) => setFormEventName(e.target.value)}
                     />
                     <input
                       id='symbol'
                       type='text'
-                      ref={(input) => { this.symbol = input }}
                       className="form-control form-control-md mb-2"
                       placeholder='Token symbol'
+                      onChange={(e) => setFormEventSymbol(e.target.value)}
                     />
                     <input
                       id='numTickets'
                       type='number'
-                      ref={(input) => { this.numTickets = input }}
                       className="form-control form-control-md mb-2"
                       placeholder='Number of Tickets'
+                      onChange={(e) => setFormNumTickets(e.target.value)}
                     />
                     <input
                       id='price'
                       type='number'
-                      ref={(input) => { this.price = input }}
                       className="form-control form-control-md mb-2"
                       placeholder='Price'
+                      onChange={(e) => setFormPrice(e.target.value)}
                     />
                     <input
                       id='canBeResold'
                       type='text'
-                      ref={(input) => { this.canBeResold = input }}
                       className="form-control form-control-md mb-2"
                       placeholder='Can the Tickets be resold?'
+                      onChange={(e) => setFormCanBeResold(e.target.value)}
                     />
                     <input
                       id='royaltyPercent'
                       type='number'
-                      ref={(input) => { this.royaltyPercent = input }}
                       className="form-control form-control-md mb-2"
                       placeholder='Resale royalty (%)'
+                      onChange={(e) => setFormRoyaltyPercent(e.target.value)}
                     />
                   </div>
                   <button type='submit' className='btn btn-primary'>CREATE EVENT</button>
@@ -282,9 +192,22 @@ class App extends Component {
             </main>
           </div>
         </div>
+        <div>
+          {eventData.length === 0 ? (
+            <>Hello</>
+          ) : (
+          eventData.map((id, index) => (
+            <h2 key={index}>
+              <p>{index}</p>
+              <p>{id.eventName}</p>
+              <p>{id.eventSymbol}</p>
+            </h2>
+          ))
+          )}
+        </div>
+        <p>{eventData[0]}</p>
       </div>
     );
-  }
 }
 
 export default App;
