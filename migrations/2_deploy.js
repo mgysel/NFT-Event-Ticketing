@@ -11,7 +11,9 @@ module.exports = async function(deployer) {
   const price = 200;
   const canBeResold = true;
   const royaltyPercent = 20;
-	await deployer.deploy(Event, numTickets, price, canBeResold, royaltyPercent);
+  const eventName = 'EventName'
+  const eventSymbol = 'EventSymbol'
+	await deployer.deploy(Event, numTickets, price, canBeResold, royaltyPercent, eventName, eventSymbol);
   
   // const event = await Event.deployed();
   // console.log(event.address);

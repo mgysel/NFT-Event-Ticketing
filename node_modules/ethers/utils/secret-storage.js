@@ -125,12 +125,13 @@ function decrypt(json, password, progressCallback) {
             return null;
         }
         var signingKey = new signing_key_1.SigningKey(privateKey);
-        if (signingKey.address !== address_1.getAddress(data.address)) {
+        if (data.address && signingKey.address !== address_1.getAddress(data.address)) {
             reject(new Error('address mismatch'));
             return null;
         }
         // Version 0.1 x-ethers metadata must contain an encrypted mnemonic phrase
-        if (searchPath(data, 'x-ethers/version') === '0.1') {
+        var locale = searchPath(data, 'x-ethers/locale');
+        if (searchPath(data, 'x-ethers/version') === '0.1' && (locale == null || locale === "en")) {
             var mnemonicCiphertext = looseArrayify(searchPath(data, 'x-ethers/mnemonicCiphertext'));
             var mnemonicIv = looseArrayify(searchPath(data, 'x-ethers/mnemonicCounter'));
             var mnemonicCounter = new aes_js_1.default.Counter(mnemonicIv);
@@ -262,7 +263,7 @@ function encrypt(privateKey, password, options, progressCallback) {
             }
         }
         else {
-            entropy = bytes_1.arrayify(HDNode.mnemonicToEntropy(options.mnemonic));
+            entropy = bytes_1.arrayify(HDNode.mnemonicToEntropy(options.mnemonic, options.wordlist));
         }
     }
     var path = options.path;
@@ -387,6 +388,9 @@ function encrypt(privateKey, password, options, progressCallback) {
                         path: path,
                         version: "0.1"
                     };
+                    if (options.wordlist && typeof (options.wordlist.locale) === "string") {
+                        data['x-ethers'].locale = options.wordlist.locale;
+                    }
                 }
                 if (progressCallback) {
                     progressCallback(1);

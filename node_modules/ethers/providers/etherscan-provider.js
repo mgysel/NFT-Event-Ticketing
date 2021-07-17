@@ -81,6 +81,7 @@ function checkLogTag(blockTag) {
     }
     return parseInt(blockTag.substring(2), 16);
 }
+var defaultApiKey = "8FG3JMZ9USS4NTA6YKEKHINU56SEPPVBJR";
 var EtherscanProvider = /** @class */ (function (_super) {
     __extends(EtherscanProvider, _super);
     function EtherscanProvider(network, apiKey) {
@@ -111,7 +112,7 @@ var EtherscanProvider = /** @class */ (function (_super) {
                 throw new Error('unsupported network');
         }
         properties_1.defineReadOnly(_this, 'baseUrl', baseUrl);
-        properties_1.defineReadOnly(_this, 'apiKey', apiKey);
+        properties_1.defineReadOnly(_this, 'apiKey', apiKey || defaultApiKey);
         return _this;
     }
     EtherscanProvider.prototype.perform = function (method, params) {
@@ -189,7 +190,7 @@ var EtherscanProvider = /** @class */ (function (_super) {
                     url += apiKey;
                     return get(url);
                 }
-                throw new Error('getBlock by blockHash not implmeneted');
+                return Promise.reject(new Error('getBlock by blockHash not implemeneted'));
             case 'getTransaction':
                 url += '/api?module=proxy&action=eth_getTransactionByHash&txhash=' + params.transactionHash;
                 url += apiKey;
@@ -206,7 +207,7 @@ var EtherscanProvider = /** @class */ (function (_super) {
                 url += '/api?module=proxy&action=eth_call' + transaction;
                 //url += '&tag=' + params.blockTag + apiKey;
                 if (params.blockTag !== 'latest') {
-                    throw new Error('EtherscanProvider does not support blockTag for call');
+                    return Promise.reject(new Error('EtherscanProvider does not support blockTag for call'));
                 }
                 url += apiKey;
                 return get(url);

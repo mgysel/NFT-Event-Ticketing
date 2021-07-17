@@ -227,6 +227,9 @@ function checkTransactionResponse(transaction) {
         networkId = 0;
     }
     result.networkId = networkId;
+    if (result.chainId == null && networkId != null) {
+        result.chainId = networkId;
+    }
     // 0x0000... should actually be null
     if (result.blockHash && result.blockHash.replace(/0/g, '') === 'x') {
         result.blockHash = null;
@@ -452,6 +455,9 @@ var BaseProvider = /** @class */ (function (_super) {
     BaseProvider.prototype._doPoll = function () {
         var _this = this;
         this.getBlockNumber().then(function (blockNumber) {
+            if (!_this.polling) {
+                return;
+            }
             _this._setFastBlockNumber(blockNumber);
             // If the block hasn't changed, meh.
             if (blockNumber === _this._lastBlockNumber) {
@@ -594,6 +600,7 @@ var BaseProvider = /** @class */ (function (_super) {
             setTimeout(function () {
                 if (value && !_this._poller) {
                     _this._poller = setInterval(_this._doPoll.bind(_this), _this.pollingInterval);
+                    _this._doPoll();
                 }
                 else if (!value && _this._poller) {
                     clearInterval(_this._poller);
@@ -1013,7 +1020,7 @@ var BaseProvider = /** @class */ (function (_super) {
         return this.getNetwork().then(function (network) {
             // No ENS...
             if (!network.ensAddress) {
-                errors.throwError('network does support ENS', errors.UNSUPPORTED_OPERATION, { operation: 'ENS', network: network.name });
+                errors.throwError('network does not support ENS', errors.UNSUPPORTED_OPERATION, { operation: 'ENS', network: network.name });
             }
             // keccak256('resolver(bytes32)')
             var data = '0x0178b8bf' + hash_1.namehash(name).substring(2);
@@ -1043,7 +1050,12 @@ var BaseProvider = /** @class */ (function (_super) {
         try {
             return Promise.resolve(address_1.getAddress(name));
         }
-        catch (error) { }
+        catch (error) {
+            // See #694
+            if (bytes_1.isHexString(name)) {
+                throw error;
+            }
+        }
         var self = this;
         var nodeHash = hash_1.namehash(name);
         // Get the addr from the resovler
@@ -1087,6 +1099,9 @@ var BaseProvider = /** @class */ (function (_super) {
             var transaction = { to: resolverAddress, data: data };
             return self.call(transaction);
         }).then(function (data) {
+            if (data == null) {
+                return null;
+            }
             // Strip off the "0x"
             data = data.substring(2);
             // Strip off the dynamic string pointer (0x20)

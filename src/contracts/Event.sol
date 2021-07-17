@@ -14,21 +14,22 @@ contract Event is ERC721 {
         bool used;
     }
     Ticket[] tickets; 
-    uint numTicketsLeft;
-    uint price;
+    uint public numTicketsLeft;
+    uint public price;
     // Percent royalty event creator receives from ticket resales
-    uint royaltyPercent;
+    uint public royaltyPercent;
     // For each user, store corresponding ticket struct
     // mapping(address => Ticket) tickets;
-    bool canBeResold;
+    bool public canBeResold;
     address public owner;
 
     // EVENTS
-    event CreateNFTTicket(address buyer, uint NFTID);
+    event CreateTicket(address buyer, uint ticketID);
     event TicketSold(address seller, address buyer, uint ticketID);
+    event TicketForSale(address seller, uint ticketID, uint price);
 
     // Creates a new Event Contract
-    constructor(uint _numTickets, uint _price, bool _canBeResold, uint _royaltyPercent) ERC721("EventName", "EventSymbol") {
+    constructor(uint _numTickets, uint _price, bool _canBeResold, uint _royaltyPercent, string memory _eventName, string memory _eventSymbol) ERC721("EventName", "EventSymbol") {
         owner = msg.sender;
         numTicketsLeft = _numTickets;
         price = _price;
@@ -48,30 +49,46 @@ contract Event is ERC721 {
 
         // Store t in tickets array, reduce numTicketsLeft
         tickets.push(t);
-        uint NFTID = tickets.length;
+        uint ticketID = tickets.length;
+        //tickets[ticketID] = t;
         numTicketsLeft--;
 
         // Mint NFT
-        _mint(msg.sender, NFTID);
-        emit CreateNFTTicket(msg.sender, NFTID);
+        _mint(msg.sender, ticketID);
+        emit CreateTicket(msg.sender, ticketID);
     }
 
     function buyTicketFromUser(address userAdd, uint ticketID) public payable requiredStage(Stages.Active) hasEnoughMoney(msg.value) canBeSold(ticketID) {
+        // make the user payable
         address payable seller = payable(userAdd);
 
+        // calc price to pay after royalty
         uint ticketPrice = tickets[ticketID].price;
         uint royalty = (royaltyPercent/100) * ticketPrice;
         uint priceToPay = ticketPrice - royalty;
 
+        //transfer money to seller
         seller.transfer(priceToPay);
         tickets[ticketID].forSale = false;
         emit TicketSold(seller, msg.sender, ticketID);
+    }
+
+    // Set ticket for sale
+    function setTicketForSale(uint ticketID, uint newPrice) public requiredStage(Stages.Active) ticketNotUsed(ticketID) {
+        tickets[ticketID].forSale = true;
+        tickets[ticketID].price = newPrice;
+        emit TicketForSale(msg.sender, ticketID, tickets[ticketID].price);
     }
 
     // Set new stage
     function setStage(Stages _stage) public {
         stage = _stage;
     }
+
+    // // getter function for ticket
+    // function getTicket(uint ticketID) public {
+    //     return tickets[ticketID];
+    // }
 
 
 
@@ -97,6 +114,16 @@ contract Event is ERC721 {
 
     modifier canBeSold(uint ticketID) {
         require(tickets[ticketID].forSale == true, "ticket not for sale");
+        _;
+    }
+
+    modifier ticketNotUsed(uint ticketID) {
+        require(tickets[ticketID].used == false, "ticket has been used");
+        _;
+    }
+
+    modifier isTicketOwner(uint ticketID) {
+        require(ownerOf(ticketID) == msg.sender, "only ticket owner can sell");
         _;
     }
 
