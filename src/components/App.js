@@ -157,6 +157,7 @@ class App extends Component {
     const events = await this.state.eventCreator.methods.getEvents().call()
     console.log(events)
 
+    // TODO: Reload events here
     // Get data for each event
     // const thisEvent = new web3.eth.Contract(Event.abi, events[0])
     // const thisEventName = await thisEvent.methods.getName().call()
@@ -226,7 +227,7 @@ class App extends Component {
                       let eventSymbol = this.symbol.value 
                       let numTickets = this.numTickets.value 
                       let price = this.price.value
-                      let canBeResold = this.canBeResold.value
+                      let canBeResold = (this.canBeResold.value === 'true')
                       let royaltyPercent = this.royaltyPercent.value
                       this.createEvent(e, eventName, eventSymbol, numTickets, price, canBeResold, royaltyPercent)
                   }}>
@@ -236,42 +237,42 @@ class App extends Component {
                       id='name'
                       type='text'
                       ref={(input) => { this.name = input }}
-                      className="form-control form-control-md"
+                      className="form-control form-control-md mb-2"
                       placeholder='Event name'
                     />
                     <input
                       id='symbol'
                       type='text'
                       ref={(input) => { this.symbol = input }}
-                      className="form-control form-control-md"
+                      className="form-control form-control-md mb-2"
                       placeholder='Token symbol'
                     />
                     <input
                       id='numTickets'
                       type='number'
                       ref={(input) => { this.numTickets = input }}
-                      className="form-control form-control-md"
+                      className="form-control form-control-md mb-2"
                       placeholder='Number of Tickets'
                     />
                     <input
                       id='price'
                       type='number'
                       ref={(input) => { this.price = input }}
-                      className="form-control form-control-md"
+                      className="form-control form-control-md mb-2"
                       placeholder='Price'
                     />
                     <input
                       id='canBeResold'
-                      type='number'
+                      type='text'
                       ref={(input) => { this.canBeResold = input }}
-                      className="form-control form-control-md"
+                      className="form-control form-control-md mb-2"
                       placeholder='Can the Tickets be resold?'
                     />
                     <input
                       id='royaltyPercent'
                       type='number'
                       ref={(input) => { this.royaltyPercent = input }}
-                      className="form-control form-control-md"
+                      className="form-control form-control-md mb-2"
                       placeholder='Resale royalty (%)'
                     />
                   </div>
