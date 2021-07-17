@@ -73,6 +73,7 @@ contract Event is ERC721 {
 
     // Creates a new Event Contract
     constructor(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent, string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
+        // TODO: Check that all values are required/viable
         owner = msg.sender;
         numTicketsLeft = _numTickets;
         price = _price;
@@ -95,6 +96,8 @@ contract Event is ERC721 {
         tickets.push(t);
         uint ticketID = tickets.length;
         numTicketsLeft--;
+
+        // TODO: Refund user if too much money
         
         // new added
         balances[owner] += price;
@@ -150,6 +153,7 @@ contract Event is ERC721 {
         _;
     }
 
+    // Requires user to have enough money to purchase ticket
     modifier hasEnoughMoney(uint money) {
         require(money >= price);
         _;
