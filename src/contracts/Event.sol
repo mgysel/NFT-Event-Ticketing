@@ -20,6 +20,7 @@ contract EventCreator {
         events.push(e);
         emit CreateEvent(msg.sender, address(e));
 
+        // QUESTION: I cannot return this because async??
         return address(e);
     }
 

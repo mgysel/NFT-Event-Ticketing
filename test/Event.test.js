@@ -6,6 +6,7 @@ const truffleAssert = require('truffle-assertions')
 const EVM_REVERT = 'VM Exception while processing transaction: revert'
 
 // Import smart contract using its artifact
+const EventCreator = artifacts.require('./EventCreator')
 const Event = artifacts.require('./Event')
 
 // Testing library
@@ -54,12 +55,12 @@ contract('Event', (accounts) => {
         })
 
         // Test Event Name
-        it('checking event name', async () => {
+        it('checking eventName', async () => {
             expect(await event.name()).to.be.eq('EventName')
         })
 
         // Test Event Symbol
-        it('checking event symbol', async () => {
+        it('checking eventSymbol', async () => {
             expect(await event.symbol()).to.be.eq('EventSymbol')
         })
     })
@@ -176,14 +177,104 @@ contract('Event', (accounts) => {
         })
 
     })
+})
 
-    // Factory Tests
-    describe('factoryContract', async () => {
 
-        beforeEach(async () => {
-            factory = await Factory.new(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
+
+// Event Creator testing
+contract('EventCreator', (accounts) => {
+    // Variables for creating the Event Contract
+    let eventCreator
+    const _numTickets = 5;
+    const _price = 50;
+    const _canBeResold = true;
+    const _royaltyPercent = 20;
+    const _eventName = 'EventName'
+    const _eventSymbol = 'EventSymbol'
+
+    // Variables for users from Ganache
+    const owner = accounts[0]
+    const buyer1 = accounts[1]
+    const buyer2 = accounts[2]
+
+    beforeEach(async () => {
+        eventCreator = await EventCreator.new()
+    })
+
+    // EventCreator Contract deployment
+    describe('deployment', async () => {
+        // Test address
+        // it contains test examples
+        it('EventCreator contract deploys successfully', async () => {
+            // NOTE: can only use await inside of an async function call
+            // Make sure deployed contract exists by ensuring not an empty string
+            const address = eventCreator.address
+            assert.notEqual(address,'')
+            assert.notEqual(address, 0x0)
+            assert.notEqual(address, null)
+            assert.notEqual(address, undefined)
+        })
+    })
+
+    // Create new event
+    describe('create event', async () => {
+        
+        it('Create event success', async () => {
+            const address = await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
+            assert.notEqual(address,'')
+            assert.notEqual(address, 0x0)
+            assert.notEqual(address, null)
+            assert.notEqual(address, undefined)
         })
 
+        // emitEvent
+        it('Checking createEvent success, address added to events list matches emitted event address', async () => {
+            let event = await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol, { from: buyer1 })
+            let events = await eventCreator.getEvents()
+            let eventAddress = events[0]
 
+            truffleAssert.eventEmitted(event, 'CreateEvent', (ev) => {
+                // Check Buyer Address
+                const creator_expected = buyer1.toString()
+                const creator_actual = ev['_creator'].toString()
+
+                // Check Event Address
+                const event_expected = eventAddress.toString()
+                const event_actual = ev['_event'].toString()
+
+                return creator_expected === creator_actual && event_expected === event_actual
+            })
+        })
+
+        it('getEventCount returns correct number of events', async () => {
+            const numEventsBefore = await eventCreator.getEventCount()
+            assert.equal(numEventsBefore, 0, 'Starting number of events should be 0')
+            
+            await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
+            const numEventsAfter1 = await eventCreator.getEventCount()
+            assert.equal(numEventsAfter1, 1, 'The number of events should increase after adding an event')
+            
+            await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
+            const numEventsAfter2 = await eventCreator.getEventCount()
+            assert.equal(numEventsAfter2, 2, 'The number of events should increase after adding an event')
+        })
+
+        it('getEvents returns list of event addresses', async () => {
+            // Note: We already checked that the event address equaled the event emitted
+            eventCreator = await EventCreator.new()
+
+            const address1 = await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
+            assert.notEqual(address1,'')
+            assert.notEqual(address1, 0x0)
+            assert.notEqual(address1, null)
+            assert.notEqual(address1, undefined)
+
+            const address2 = await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
+            assert.notEqual(address2,'')
+            assert.notEqual(address2, 0x0)
+            assert.notEqual(address2, null)
+            assert.notEqual(address2, undefined)
+        })
     })
+
 })
