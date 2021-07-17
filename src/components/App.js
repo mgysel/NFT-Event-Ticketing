@@ -39,20 +39,21 @@ class App extends Component {
     const networkData = Event.networks[networkId]
     console.log(networkData)
 
-    // // Protect against SC data not being deployed to network
-    // if(networkData) {
-    //   // Need contract abi and address to connect
-    //   // NOTE: SHOULD STORE THESE IN DB?
-    //   const abi = Event.abi
-    //   const address = networkData.address
-    //   const contract = new web3.eth.Contract(abi, address)
-    //   this.setState({ contract })
+    // Protect against SC data not being deployed to network
+    if(networkData) {
+      // Need contract abi and address to connect
+      // NOTE: SHOULD STORE THESE IN DB?
+      const abi = Event.abi
+      // const address = networkData.address
+      const address = '0x0d7f7Ec806f5a24F519eaC6F2783a98738EDeeFD'
+      const contract = new web3.eth.Contract(abi, address)
+      this.setState({ contract })
   
-    //   // Load Event Data
+      // Load Event Data
 
-    // } else {
-    //   window.alert('Smart contract not deployed to detected network.')
-    // }
+    } else {
+      window.alert('Smart contract not deployed to detected network.')
+    }
   }
 
   async createEvent(e) {

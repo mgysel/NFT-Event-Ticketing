@@ -53,22 +53,21 @@ contract('Event', (accounts) => {
             assert.notEqual(address, null)
             assert.notEqual(address, undefined)
         })
-
-        // Test Event Name
-        it('checking eventName', async () => {
-            expect(await event.name()).to.be.eq('EventName')
-        })
-
-        // Test Event Symbol
-        it('checking eventSymbol', async () => {
-            expect(await event.symbol()).to.be.eq('EventSymbol')
-        })
     })
 
     describe('constructor', async () => {
+
+        it('checking eventName', async () => {
+            assert.equal(await event.name(), _eventName, 'Event name in smart contract should match event name defined in constructor')
+        })
+
+        it('checking eventSymbol', async () => {
+            assert.equal(await event.symbol(), _eventSymbol, 'Event symbol in smart contract should match event symbol defined in constructor')
+        })
+        
         it('checking smart contract owner', async () => {
             // Check that SC owner is first account from Ganache
-            expect(await event.owner()).to.be.eq(owner)
+            assert.equal(await event.owner(), owner, 'Owner in smart contract should match owner defined in constructor')
         })
 
         it('checking numTicketsLeft set correctly', async () => {
@@ -85,7 +84,7 @@ contract('Event', (accounts) => {
 
         it('checking canBeResold set correctly', async () => {
             // Get first account from Ganache
-            expect(await event.canBeResold()).to.be.eq(true)
+            assert.equal(await event.canBeResold(), true, 'canBeResold in smart contract should match canBeResold defined in constructor')
         })
 
         it('checking royaltyPercent set correctly', async () => {
@@ -119,8 +118,7 @@ contract('Event', (accounts) => {
             event.setStage(1)
         })
 
-        // Buy Ticket Success
-        it('checking buyTicket', async () => {
+        it('checking buyTicket Event', async () => {
             let ticket1 = await event.buyTicket({ value: _price, from: buyer1 })
             // NOTE: Inside truffleAssert, we have to return results
             truffleAssert.eventEmitted(ticket1, 'CreateTicket', (ev) => {
@@ -134,6 +132,20 @@ contract('Event', (accounts) => {
 
                 return ticketID_actual === ticketID_expected && address_actual === address_expected
             })
+        })
+
+        it('checking user receives NFT after buying ticket', async () => {
+            let bal = await event.balanceOf(buyer1, { from: buyer1 })
+            assert.equal(bal, 0, 'Customer should have 0 NFTs before purchasing any tickets')
+            
+            await event.buyTicket({ value: _price, from: buyer1 })
+            bal = await event.balanceOf(buyer1, { from: buyer1 })
+            assert.equal(bal, 1, 'Customer should have 1 NFT after purchasing ticket')
+
+            await event.buyTicket({ value: _price, from: buyer1 })
+            bal = await event.balanceOf(buyer1, { from: buyer1 })
+            assert.equal(bal, 2, 'Customer should have 2 NFTs after purchasing two ticket')
+
         })
 
         it('checking SC balance increases after ticket purchase', async () => {
