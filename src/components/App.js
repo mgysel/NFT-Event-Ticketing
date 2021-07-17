@@ -1,4 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import {
+  Heading,
+  Flex,
+  Wrap,
+  WrapItem,
+  Button,
+  Text,
+  IconButton,
+  Icon,
+  SimpleGrid,
+  Box,
+} from "@chakra-ui/react";
 import Web3 from 'web3'
 import './App.css';
 import Event from '../abis/Event.json';
@@ -16,6 +28,7 @@ function App() {
   const [eventContracts, setEventContracts] = useState([]);
   const [eventAddresses, setEventAddresses] = useState([]);
   const [eventData, setEventData] = useState([]);
+  const [thisEventData, setThisEventData] = useState("Placeholder");
 
   const [formEventName, setFormEventName] = useState("");
   const [formEventSymbol, setFormEventSymbol] = useState("");
@@ -92,9 +105,10 @@ function App() {
             console.log("THIS EVENT DATA")
             console.log(thisEventData)
             eventData.push(thisEventData)
+            setThisEventData(thisEventData)
+            console.log("EVENT DATA")
+            console.log(eventData)
           }
-
-          console.log(eventData[0].eventName)
 
 
         } catch(e) {
@@ -186,26 +200,26 @@ function App() {
                       onChange={(e) => setFormRoyaltyPercent(e.target.value)}
                     />
                   </div>
-                  <button type='submit' className='btn btn-primary'>CREATE EVENT</button>
+                  <button type='submit' className='btn btn-primary mb-4'>CREATE EVENT</button>
                 </form>
               </div>
             </main>
           </div>
         </div>
-        <div>
-          {eventData.length === 0 ? (
-            <>Hello</>
-          ) : (
-          eventData.map((id, index) => (
-            <h2 key={index}>
-              <p>{index}</p>
-              <p>{id.eventName}</p>
-              <p>{id.eventSymbol}</p>
-            </h2>
-          ))
-          )}
+        <div div className="content mr-auto ml-auto">
+        <h1 className="text-center" pb="30px">Created Events</h1>
+          <SimpleGrid columns={4} spacing={10}>
+            { 
+              eventData.map((id, index) => (
+                  <Box key={index} border="1px solid black" p="20px" width="20rem">
+                    <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
+                    <Text>Name: {id.eventName}</Text>
+                    <Text>Symbol: {id.eventSymbol}</Text>
+                  </Box>
+              ))
+            }
+          </SimpleGrid>
         </div>
-        <p>{eventData[0]}</p>
       </div>
     );
 }
