@@ -21,3 +21,12 @@ module.exports = async function(deployer) {
   // console.log(event.address);
 
 };
+
+
+
+
+// const Event = artifacts.require("Event");
+// const EventCreator = artifacts.require("EventCreator");
+// module.exports = function (_deployer) {
+//   _deployer.deploy(Event).then(() => _deployer.deploy(EventCreator, Event.address)); 
+// };
