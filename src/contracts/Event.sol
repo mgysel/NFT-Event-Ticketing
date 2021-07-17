@@ -11,17 +11,18 @@ contract EventCreator {
     event CreateEvent(address _creator, address _event);
 
     // Deploy a new event contract
-    function createEvent(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent, string memory _eventName, string memory _eventSymbol) external returns(address newContract) {
+    function createEvent(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent, string memory _eventName, string memory _eventSymbol) external returns(address newEvent) {
         // Create a new Event smart contract
         // NOTE: 'new' keyword creates a new SC and returns address
         Event e = new Event(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol);
         
         // Store/return event address
         events.push(e);
-        emit CreateEvent(msg.sender, address(e));
+        address eventAddress = address(e);
+        emit CreateEvent(msg.sender, eventAddress);
 
         // QUESTION: I cannot return this because async??
-        return address(e);
+        return eventAddress;
     }
 
     // Return number of events
