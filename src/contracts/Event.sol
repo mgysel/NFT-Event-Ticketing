@@ -2,6 +2,7 @@
 pragma solidity 0.8.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
  
+/// @title Factory Contract to create events
 contract EventCreator {
 
     // Created events
@@ -10,8 +11,17 @@ contract EventCreator {
     // EVENTS
     event CreateEvent(address _creator, address _event);
 
-    // Deploy a new event contract
-    function createEvent(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent, string memory _eventName, string memory _eventSymbol) external returns(address newEvent) {
+    /**
+     * @notice Creates Events
+     * @param _numTickets
+     * @param _price
+     * @param _canBeResold
+     * @param _royaltyPercent
+     * @param _eventName
+     * @param _eventSymbol
+     */
+    function createEvent(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent,
+            string memory _eventName, string memory _eventSymbol) external returns(address newEvent) {
         // Create a new Event smart contract
         // NOTE: 'new' keyword creates a new SC and returns address
         Event e = new Event(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol);
@@ -41,6 +51,7 @@ contract EventCreator {
     }  
 }
 
+/// @title Contract to mint tickets of an event
 contract Event is ERC721 {
 
     enum Stages { Prep, Active, Paused, CheckinOpen, Cancelled, Closed }
@@ -53,13 +64,16 @@ contract Event is ERC721 {
         uint32 resalePrice;
         bool used;
     }
-    Ticket[] tickets; 
+    //Ticket[] tickets; 
     uint32 public numTicketsLeft;
     uint32 public price;
+    
     // Percent royalty event creator receives from ticket resales
     uint32 public royaltyPercent;
+    
     // For each user, store corresponding ticket struct
-    // mapping(address => Ticket) tickets;
+    mapping(address => Ticket) tickets;
+    
     bool public canBeResold;
     address public owner;
     
@@ -72,7 +86,8 @@ contract Event is ERC721 {
     event Refund(address organizer, address receiver, uint money);
 
     // Creates a new Event Contract
-    constructor(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent, string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
+    constructor(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent,
+            string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
         owner = msg.sender;
         numTicketsLeft = _numTickets;
         price = _price;
@@ -105,13 +120,13 @@ contract Event is ERC721 {
     }
 
     // Set new stage
-    function setStage(Stages _stage) public restricted {
+    function setStage(Stages _stage) public onlyOwner {
         stage = _stage;
     }
 
 
     // once the event is cancelled, organizer should refund money to buyers
-    function refund(address receiver, uint money) public restricted returns (bool success){
+    function refund(address receiver, uint money) public onlyOwner returns (bool success){
         require (money > 0);
         require(balances[msg.sender] >= money, "Not enough money");
         emit Refund(msg.sender, receiver, money);
@@ -133,8 +148,14 @@ contract Event is ERC721 {
     // MODIFIERS
 
     // Only owner
-    modifier restricted() {
+    modifier onlyOwner() {
         require(msg.sender == owner, "Can only be executed by the owner");
+        _;
+    }
+    
+    // Only Attendee
+    modifier onlyAttendee() {
+        require(msg.sender == owner, "Can only be executed by the manager");
         _;
     }
 
