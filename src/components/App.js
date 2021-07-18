@@ -20,9 +20,9 @@ import EventCreator from '../abis/EventCreator.json'
 
 
 function App() {
-  //const [web3, setWeb3] = useState("undefined");
+  const [web3, setWeb3] = useState("undefined");
   const [account, setAccount] = useState("");
-  const [balance, setBalance] = useState(0);
+  const [netId, setNetId] = useState("");
   const [eventCreator, setEventCreator] = useState("");
   const [eventCreatorAddress, setEventCreatorAddress] = useState("");
   const [eventContracts, setEventContracts] = useState([]);
@@ -40,13 +40,10 @@ function App() {
   const [formRoyaltyPercent, setFormRoyaltyPercent] = useState("");
 
   
-  // Connect app to blockchain with web3
-  // componentWillMount always gets called when this component gets attached to DOM
+  // On page load, load eventCreator contract
   useEffect(() => {
     async function componentDidMount() {
-      //await this.loadWeb3()
-      await loadBlockchainData()
-      //await this.getEvents()
+      await loadEventCreator()
 
       if (typeof window.ethereum !== 'undefined') {
         console.log('MetaMask is installed!');
@@ -58,12 +55,11 @@ function App() {
     componentDidMount()
   }, [])
 
-  async function loadBlockchainData() {
+  async function loadEventCreator() {
     if (typeof window.ethereum !== 'undefined') {
       // Connect to blockchain
       const web3 = new Web3(window.ethereum)
-      console.log("WEB3")
-      console.log(web3)
+      setWeb3(web3)
 
       // User must now allow for connection
       await window.ethereum.enable()
@@ -71,67 +67,17 @@ function App() {
       // Get Account, make sure there is a connection
       const accounts = await web3.eth.getAccounts()
       if (typeof accounts[0] !== 'undefined') {
-        const netId = await web3.eth.net.getId()
-        const balance = await web3.eth.getBalance(accounts[0])
-        console.log("NETID")
-        console.log(netId)
         setAccount(accounts[0])
-        //setWeb3(web3)
-        setBalance(balance)
+        const netId = await web3.eth.net.getId()
+        setNetId(netId)
 
-        // Load Event Creator
         try {
-          const eventCreator = new web3.eth.Contract(EventCreator.abi, EventCreator.networks[netId].address)
-          setEventCreator(eventCreator)
+          // Load Event Creator Contract
+          const thisEventCreator = new web3.eth.Contract(EventCreator.abi, EventCreator.networks[netId].address)
+          setEventCreator(thisEventCreator)
   
           // Store event addresses in eventAddresses
-          const eventAddresses = await eventCreator.methods.getEvents().call()
-          console.log("EVENT ADDRESSES")
-          console.log(eventAddresses)
-          setEventAddresses(eventAddresses)
-
-          // Create event contract from each event address, store in eventContracts
-          // Get event data from each event contract, store in eventData
-          for (var i = 0; i < eventAddresses.length; i++) {
-            console.log(eventAddresses[i])
-            const thisEventContract = new web3.eth.Contract(Event.abi, eventAddresses[i])
-            eventContracts.push(thisEventContract)
-
-            const thisEventData = {}
-            thisEventData['eventName'] = await thisEventContract.methods.name().call()
-            thisEventData['eventSymbol'] = await thisEventContract.methods.symbol().call()
-            thisEventData['numTicketsLeft'] = await thisEventContract.methods.numTicketsLeft().call()
-            thisEventData['price'] = await thisEventContract.methods.price().call()
-            thisEventData['canBeResold'] = await thisEventContract.methods.canBeResold().call()
-            thisEventData['royaltyPercent'] = await thisEventContract.methods.royaltyPercent().call()
-            console.log("THIS EVENT DATA")
-            console.log(thisEventData)
-            eventData.push(thisEventData)
-            setEventData(eventData)
-            setThisEventData(thisEventData)
-            console.log("EVENT DATA")
-            console.log(eventData)
-
-            console.log("TICKET BALANCES")
-            const thisBalance = await thisEventContract.methods.balanceOf(accounts[0]).call()
-            console.log(thisBalance)
-          }
-
-          // Get user tickets for each event
-          console.log("TICKET BALANCES")
-          for (i = 0; i < eventContracts.length; i++) {
-            let bal = await eventContracts[i].methods.balanceOf(accounts[0]).call()
-            console.log("Event Balance")
-            console.log(i)
-            console.log(bal['_hex']);
-            tickets.push({
-              'eventNumber': i, 
-              'eventName': eventData[i]['eventName'],
-              'numTickets': bal['_hex']
-            })
-            setThisTicket([i, bal])
-          }
-
+          setEventAddresses(await thisEventCreator.methods.getEvents().call())
 
         } catch(e) {
           console.log('Error', e)
@@ -141,10 +87,67 @@ function App() {
     } else {
       window.alert('Please install MetaMask')
     }
-
   }
 
+  // Create event contracts and extract data after eventAddresses have been generated
+  useEffect(() => {
+    if (eventAddresses !== null) {
+      async function createEventContracts() {
+        // Create event contract from each event address, store in eventContracts
+        // Get event data from each event contract, store in eventData
+        var allEventContracts = []
+        var allEventData = []
+        for (var i = 0; i < eventAddresses.length; i++) {
+          // Create event contract from event abi, address
+          const thisEventContract = new web3.eth.Contract(Event.abi, eventAddresses[i])
+          allEventContracts.push(thisEventContract)
+          
+          // Extract event data from event contract
+          const thisEventData = {}
+          thisEventData['eventName'] = await thisEventContract.methods.name().call()
+          thisEventData['eventSymbol'] = await thisEventContract.methods.symbol().call()
+          thisEventData['numTicketsLeft'] = await thisEventContract.methods.numTicketsLeft().call()
+          thisEventData['price'] = await thisEventContract.methods.price().call()
+          thisEventData['canBeResold'] = await thisEventContract.methods.canBeResold().call()
+          thisEventData['royaltyPercent'] = await thisEventContract.methods.royaltyPercent().call()
+          console.log("THIS EVENT DATA")
+          console.log(thisEventData)
+          allEventData.push(thisEventData)
+        }
 
+        setEventContracts(allEventContracts)
+        setEventData(allEventData)
+      }
+
+      createEventContracts()
+    }
+  }, [eventAddresses])
+
+  // Get user Tickets once eventData has been generated
+  useEffect(() => {
+    if (eventData !== null) {
+      async function getUserTickets() {
+        // Get user tickets for each event
+        console.log("TICKET BALANCES")
+        for (var i = 0; i < eventContracts.length; i++) {
+          let bal = await eventContracts[i].methods.balanceOf(account).call()
+          console.log("Event Balance")
+          console.log(i)
+          console.log(bal['_hex']);
+          tickets.push({
+            'eventNumber': i, 
+            'eventName': eventData[i]['eventName'],
+            'numTickets': bal['_hex']
+          })
+          setThisTicket([i, bal])
+        }
+      }
+  
+      getUserTickets()
+    }
+  }, [eventData])
+
+  // Allows user to create an event
   async function createEvent(e) {
     // Check that eventCreator
     if (eventCreator !== 'undefined') {
@@ -170,12 +173,14 @@ function App() {
     // if (eventContract)
     const amount = eventData[eventNumber]['price']
     console.log("AMOUNT")
-    console.log(amount.toString())
+    console.log(amount)
+    console.log(typeof amount)
     console.log("ACCOUNT")
     console.log(account)
+    console.log(typeof account)
     // await eventContract.methods.buyTicket().send({ from: account.toString() })
-    console.log(eventContract.methods.buyTicket())
-    await eventContract.methods.buyTicket().send({ value: amount.toString(), from: account })
+    // console.log(eventContract.methods.buyTicket())
+    await eventContract.methods.buyTicket().send({ value: amount, from: account })
 
   }
 
@@ -250,7 +255,7 @@ function App() {
           </div>
         </div>
         <div div className="content mr-auto ml-auto">
-          <h1 className="text-center" pb="30px">Created Events</h1>
+          <h1 className="text-center" pb="30px">All Events</h1>
           <SimpleGrid columns={4} spacing={10}>
             { 
               eventData.map((id, index) => (
