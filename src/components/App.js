@@ -158,6 +158,27 @@ function App() {
     }
   }
 
+  async function buyTicket(e, eventNumber) {
+    console.log(eventNumber)
+    // Check that eventCreator
+
+    const eventContract = eventContracts[eventNumber]
+    console.log("EVENT CONTRACT")
+    console.log(eventContract)
+    console.log(await eventContract.methods.name.call())
+
+    // if (eventContract)
+    const amount = eventData[eventNumber]['price']
+    console.log("AMOUNT")
+    console.log(amount.toString())
+    console.log("ACCOUNT")
+    console.log(account)
+    // await eventContract.methods.buyTicket().send({ from: account.toString() })
+    console.log(eventContract.methods.buyTicket())
+    await eventContract.methods.buyTicket().send({ value: amount.toString(), from: account })
+
+  }
+
 
     return (
       <div>
@@ -237,6 +258,12 @@ function App() {
                     <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
                     <Text>Name: {id.eventName}</Text>
                     <Text>Symbol: {id.eventSymbol}</Text>
+                    <button className='btn btn-primary mb-4' onClick={(e) => {
+                      e.preventDefault()
+                      buyTicket(e, index)
+                    }}>
+                      Buy Ticket
+                    </button>
                   </Box>
               ))
             }
