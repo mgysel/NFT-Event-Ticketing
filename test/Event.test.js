@@ -219,7 +219,7 @@ contract('Event', (accounts) => {
         })
         
         it('checking ticket mark as used', async () => {
-                        console.log(await event.tickets(buyer2));
+            console.log(await event.tickets(buyer2));
             await event.setTicketToUsed({ sQRCodeKey: "12345", from: buyer1 })
         })
     })

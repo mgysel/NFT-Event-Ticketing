@@ -29,6 +29,8 @@ function App() {
   const [eventAddresses, setEventAddresses] = useState([]);
   const [eventData, setEventData] = useState([]);
   const [thisEventData, setThisEventData] = useState("Placeholder");
+  const [tickets, setTickets] = useState([]);
+  const [thisTicket, setThisTicket] = useState("Placeholder");
 
   const [formEventName, setFormEventName] = useState("");
   const [formEventSymbol, setFormEventSymbol] = useState("");
@@ -105,13 +107,30 @@ function App() {
             console.log("THIS EVENT DATA")
             console.log(thisEventData)
             eventData.push(thisEventData)
+            setEventData(eventData)
             setThisEventData(thisEventData)
             console.log("EVENT DATA")
             console.log(eventData)
+
+            console.log("TICKET BALANCES")
+            const thisBalance = await thisEventContract.methods.balanceOf(accounts[0]).call()
+            console.log(thisBalance)
           }
 
-          // TODO: Get user tickets for each event
-          // I think I will have to query individual event contracts, which is not ideal
+          // Get user tickets for each event
+          console.log("TICKET BALANCES")
+          for (i = 0; i < eventContracts.length; i++) {
+            let bal = await eventContracts[i].methods.balanceOf(accounts[0]).call()
+            console.log("Event Balance")
+            console.log(i)
+            console.log(bal['_hex']);
+            tickets.push({
+              'eventNumber': i, 
+              'eventName': eventData[i]['eventName'],
+              'numTickets': bal['_hex']
+            })
+            setThisTicket([i, bal])
+          }
 
 
         } catch(e) {
@@ -210,7 +229,7 @@ function App() {
           </div>
         </div>
         <div div className="content mr-auto ml-auto">
-        <h1 className="text-center" pb="30px">Created Events</h1>
+          <h1 className="text-center" pb="30px">Created Events</h1>
           <SimpleGrid columns={4} spacing={10}>
             { 
               eventData.map((id, index) => (
@@ -218,6 +237,20 @@ function App() {
                     <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
                     <Text>Name: {id.eventName}</Text>
                     <Text>Symbol: {id.eventSymbol}</Text>
+                  </Box>
+              ))
+            }
+          </SimpleGrid>
+        </div>
+        <div div className="content mr-auto ml-auto">
+          <h1 className="text-center" pb="30px">My Tickets</h1>
+          <SimpleGrid columns={4} spacing={10}>
+            { 
+              tickets.map((id, index) => (
+                  <Box key={index} border="1px solid black" p="20px" width="20rem">
+                    <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
+                    <Text>Event: {id.eventName}</Text>
+                    <Text>Number of Tickets: {id.numTickets}</Text>
                   </Box>
               ))
             }
