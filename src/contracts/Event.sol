@@ -75,7 +75,6 @@ contract Event is ERC721 {
     
     // Ticket struct 
     struct Ticket {
-        address owner;
         uint32 price;
         uint32 resalePrice;
         TicketStatus status;
@@ -99,7 +98,7 @@ contract Event is ERC721 {
     event CreateTicket(address buyer, uint ticketID);
     event WithdrawalMoney(address receiver, uint money);
     event Refund(address organizer, address receiver, uint money);
-    event TicketUsed(uint256 iRandomNumber);
+    event TicketUsed(string sQRCodeKey);
 
     // Creates a new Event Contract
     constructor(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent,
@@ -115,11 +114,10 @@ contract Event is ERC721 {
      * @notice Buy tickets
      * @dev Checks: State is Active, has enough money
      */
-    function buyTicket() public payable requiredStage(Stages.Active) ticketsLeft 
-                                            hasEnoughMoney(msg.value) {
+    function buyTicket() public payable buyingTicketOpen ticketsLeft 
+                                            hasEnoughMoney(msg.value) returns (uint){
         // Create Ticket t
         Ticket memory t;
-        t.owner = msg.sender;
         t.price = price;
         t.resalePrice = price;
         t.status = TicketStatus.Valid;
@@ -135,6 +133,8 @@ contract Event is ERC721 {
         // Mint NFT
         _mint(msg.sender, ticketID);
         emit CreateTicket(msg.sender, ticketID);
+        
+        return ticketID;
     }
 
     /**
@@ -142,26 +142,30 @@ contract Event is ERC721 {
      * @dev Only owner can change state
      * @param _stage Stages as set in enum Stages
      */
-    function setStage(Stages _stage) public onlyOwner {
+    function setStage(Stages _stage) public onlyOwner returns (Stages) {
         stage = _stage;
+        return stage;
     }
     
     /**
      * @notice Mark ticket as used
      * @dev Only a valid buyer can mark ticket as used
-     * @param iRandomNumber Random number sent by the app 
+     * @param sQRCodeKey QR Code key sent by the app 
      */
-    function setTicketToUsed(uint256 iRandomNumber) public onlyAttendee requiredStage(Stages.Active) {
+    function setTicketToUsed(string memory sQRCodeKey) public requiredStage(Stages.CheckinOpen)
+                                                                    returns (string memory){
 		Ticket memory ticket = tickets[msg.sender];
 		
 		// Validate that user has a ticket they own and it is valid
-        require(ticket.status == TicketStatus.Valid);
+        require(ticket.status == TicketStatus.Valid, "There is no valid ticket for this user");
         
         // Ticket is valid so mark it as used
         ticket.status = TicketStatus.Used;
         
         // Raise event which Gate Management system can consume then
-        emit TicketUsed(iRandomNumber);
+        emit TicketUsed(sQRCodeKey);
+        
+        return sQRCodeKey;
 	}
 	
     /**
@@ -198,16 +202,16 @@ contract Event is ERC721 {
         require(msg.sender == owner, "Can only be executed by the owner");
         _;
     }
-    
-    // Only Attendee
-    modifier onlyAttendee() {
-        require(msg.sender == owner, "Can only be executed by the manager");
-        _;
-    }
 
     // Requires stage to be _stage
     modifier requiredStage(Stages _stage) {
         require(stage == _stage);
+        _;
+    }
+    
+    // Check if buying is open
+    modifier buyingTicketOpen() {
+        require(stage == Stages.Active || stage == Stages.CheckinOpen);
         _;
     }
     

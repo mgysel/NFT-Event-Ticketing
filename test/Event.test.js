@@ -31,10 +31,14 @@ contract('Event', (accounts) => {
     const _eventSymbol = 'EventSymbol'
 
     // Variables for users from Ganache
-    const owner = accounts[0]
-    const buyer1 = accounts[1]
-    const buyer2 = accounts[2]
-
+    const owner = accounts[0];
+    const buyer1 = accounts[1];
+    const buyer2 = accounts[2];
+    const buyer3 = accounts[3];
+    const buyer4 = accounts[4];
+    const buyer5 = accounts[5];
+    const buyer6 = accounts[6];
+    const buyer7 = accounts[7];
 
     beforeEach(async () => {
         event = await Event.new(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
@@ -101,22 +105,22 @@ contract('Event', (accounts) => {
 
         it('checking cannot buy ticket unless active stage', async () => {
             // Prep (0) Stage
-            event.setStage(0)
+            await event.setStage(0)
             await event.buyTicket({ value: (_price), from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
             // Paused (2) Stage
-            event.setStage(2)
+            await event.setStage(2)
             await event.buyTicket({ value: (_price), from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
             // Cancelled (4) Stage
-            event.setStage(4)
+            await event.setStage(4)
             await event.buyTicket({ value: (_price), from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
             // Closed (5) Stage
-            event.setStage(5)
+            await event.setStage(5)
             await event.buyTicket({ value: (_price), from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
         })
 
         beforeEach(async () => {
             // Set stage to active
-            event.setStage(1)
+            await event.setStage(1)
         })
 
         // Buy Ticket Success
@@ -129,9 +133,8 @@ contract('Event', (accounts) => {
                 const address_actual = ev['buyer'].toString()
 
                 // Check ticketID
-                const ticketID_expected = '1'
+                const ticketID_expected = '5'
                 const ticketID_actual = ev['ticketID'].toString()
-
                 return ticketID_actual === ticketID_expected && address_actual === address_expected
             })
         })
@@ -158,7 +161,7 @@ contract('Event', (accounts) => {
             await event.buyTicket({ value: (_price - 1), from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
         })
 
-        it('checking numTicketsLeft Decrements', async () => {
+       it('checking numTicketsLeft Decrements', async () => {
             const numTicketsBefore = await event.numTicketsLeft()
             await event.buyTicket({ value: _price, from: buyer1 })
             const numTicketsAfter = await event.numTicketsLeft()
@@ -168,18 +171,47 @@ contract('Event', (accounts) => {
 
         // Not enough tickets left
         it('checking not enough tickets left', async () => {
-            await event.buyTicket({ value: (_price), from: buyer1 }) 
-            await event.buyTicket({ value: (_price), from: buyer1 })   
-            await event.buyTicket({ value: (_price), from: buyer1 })
-            await event.buyTicket({ value: (_price), from: buyer1 })
-            await event.buyTicket({ value: (_price), from: buyer1 })
-            await event.buyTicket({ value: (_price), from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
+            await event.buyTicket({ value: (_price), from: buyer2 }) 
+            await event.buyTicket({ value: (_price), from: buyer3 })   
+            await event.buyTicket({ value: (_price), from: buyer4 })
+            await event.buyTicket({ value: (_price), from: buyer5 })
+            await event.buyTicket({ value: (_price), from: buyer6 })
+            await event.buyTicket({ value: (_price), from: buyer7 }).should.be.rejectedWith(EVM_REVERT)
         })
 
     })
+
+    describe('setTicketToUsed', async () => {
+
+        it('checking cannot set Ticket To Used unless Checkin stage', async () => {
+            // Prep (0) Stage
+            await event.setStage(0)
+            await event.setTicketToUsed(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            // Paused (1) Stage
+            await event.setStage(1)
+            await event.setTicketToUsed(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            // Paused (2) Stage
+            await event.setStage(2)
+            await event.setTicketToUsed(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            // Cancelled (4) Stage
+            await event.setStage(4)
+            await event.setTicketToUsed(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            // Closed (5) Stage
+            await event.setStage(5)
+            await event.setTicketToUsed(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+        })
+
+        beforeEach(async () => {
+            // Set stage to Checkin Open
+            await event.setStage(3)
+        })
+        
+        it('checking ticket mark as used', async () => {
+                        console.log(await event.tickets(buyer2));
+            await event.setTicketToUsed({ sQRCodeKey: "12345", from: buyer1 })
+        })
+    })
 })
-
-
 
 // Event Creator testing
 contract('EventCreator', (accounts) => {
