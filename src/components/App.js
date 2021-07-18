@@ -110,6 +110,9 @@ function App() {
             console.log(eventData)
           }
 
+          // TODO: Get user tickets for each event
+          // I think I will have to query individual event contracts, which is not ideal
+
 
         } catch(e) {
           console.log('Error', e)
