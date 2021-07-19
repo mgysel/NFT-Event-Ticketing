@@ -37,6 +37,7 @@ function App() {
   const [formCanBeResold, setFormCanBeResold] = useState("");
   const [formRoyaltyPercent, setFormRoyaltyPercent] = useState("");
 
+  const [sRandomHash, setSRandomHash] = useState("");
   const [eventStage, setEventStage] = useState(0);
 
   
@@ -203,15 +204,22 @@ function App() {
     }
   }
 
+  // Allows user to purchase ticket
   async function buyTicket(e, eventNumber) {
-    console.log(eventNumber)
-    // Check that eventCreator
-
-    const eventContract = eventContracts[eventNumber]
+    
     const amount = eventData[eventNumber]['price']
 
     try {
       await eventContracts[eventNumber].methods.buyTicket().send({ value: amount, from: account })
+    } catch(e) {
+      console.log('Buy Ticket Error: ', e)
+    }
+  }
+
+  // Allows user to mark ticket as used
+  async function setTicketToUsed(e, eventNumber) {
+    try {
+      await eventContracts[eventNumber].methods.setTicketToUsed(sRandomHash).send({ from: account })
     } catch(e) {
       console.log('Buy Ticket Error: ', e)
     }
@@ -316,7 +324,23 @@ function App() {
                   <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
                   <Text>Event: {id.eventName}</Text>
                   <Text>Number of Tickets: {id.numTickets}</Text>
+                  <form onSubmit={(e) => {
+                    e.preventDefault()
+                    setTicketToUsed(e, index)
+                  }}>
+                    <div className='form-group mr-sm-2'>
+                      <input
+                        id='eventStage'
+                        type='number'
+                        className="form-control form-control-md mb-2"
+                        placeholder='Set SRandomHash'
+                        onChange={(e) => setSRandomHash(e.target.value)}
+                      />
+                    </div>
+                    <button type='submit' className='btn btn-primary mb-4'>Mark Ticket As Used</button>
+                  </form>
                 </Box>
+
             ))
           }
         </SimpleGrid>
