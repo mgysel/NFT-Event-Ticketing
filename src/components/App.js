@@ -208,34 +208,13 @@ function App() {
     // Check that eventCreator
 
     const eventContract = eventContracts[eventNumber]
-    console.log("EVENT CONTRACT")
-    console.log(eventContract)
-    console.log(await eventContract.methods.name.call())
-
-    // if (eventContract)
-    const dollarAmount = eventData[eventNumber]['price'] + 500
-    const ETHAmount = dollarAmount * 0.00053
-    const amount = web3.utils.toWei(ETHAmount.toString(), 'ether')
-    console.log("AMOUNT")
-    console.log(amount)
-    console.log(typeof amount)
-    console.log("ACCOUNT")
-    console.log(account)
-    console.log(typeof account)
-    // await eventContract.methods.buyTicket().send({ from: account.toString() })
-    // console.log(eventContract.methods.buyTicket())
+    const amount = eventData[eventNumber]['price']
 
     try {
       await eventContracts[eventNumber].methods.buyTicket().send({ value: amount, from: account })
     } catch(e) {
       console.log('Buy Ticket Error: ', e)
     }
-    
-    //.send({value: amount.toString(), from: this.state.account })
-
-    // "Error: [ethjs-query] while formatting outputs from RPC 
-    // '{"value":{"code":-32603,"data":{"message":"VM Exception while processing transaction: revert","code":-32000,"data":{"0x35aa6befb0df546505cbc713a2bbe6e8cf92fc9adb89730c50ace58ffcd096b6":{"error":"revert","program_counter":6248,"return":"0x"},"stack":"RuntimeError: VM Exception while processing transaction: revert\n    at Function.RuntimeError.fromResults (/Applications/Ganache.app/Contents/Resources/static/node/node_modules/ganache-core/lib/utils/runtimeerror.js:94:13)\n    at BlockchainDouble.processBlock (/Applications/Ganache.app/Contents/Resources/static/node/node_modules/ganache-core/lib/blockchain_double.js:627:24)\n    at runMicrotasks (<anonymous>)\n    at processTicksAndRejections (internal/process/task_queues.js:93:5)","name":"RuntimeError"}}}}'"
-
   }
 
   return (
