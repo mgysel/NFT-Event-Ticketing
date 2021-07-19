@@ -337,7 +337,7 @@ function App() {
                         onChange={(e) => setSRandomHash(e.target.value)}
                       />
                     </div>
-                    <button type='submit' className='btn btn-primary mb-4'>Mark Ticket As Used</button>
+                    <button type='submit' className='btn btn-primary mb-4'>Set Ticket To Used</button>
                   </form>
                 </Box>
 
