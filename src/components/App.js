@@ -24,13 +24,11 @@ function App() {
   const [account, setAccount] = useState("");
   const [netId, setNetId] = useState("");
   const [eventCreator, setEventCreator] = useState("");
-  const [eventCreatorAddress, setEventCreatorAddress] = useState("");
   const [eventContracts, setEventContracts] = useState([]);
   const [eventAddresses, setEventAddresses] = useState([]);
   const [eventData, setEventData] = useState([]);
-  const [thisEventData, setThisEventData] = useState("Placeholder");
   const [tickets, setTickets] = useState([]);
-  const [thisTicket, setThisTicket] = useState("Placeholder");
+  const [myEvents, setMyEvents] = useState([]);
 
   const [formEventName, setFormEventName] = useState("");
   const [formEventSymbol, setFormEventSymbol] = useState("");
@@ -38,6 +36,8 @@ function App() {
   const [formPrice, setFormPrice] = useState("");
   const [formCanBeResold, setFormCanBeResold] = useState("");
   const [formRoyaltyPercent, setFormRoyaltyPercent] = useState("");
+
+  const [eventStage, setEventStage] = useState(0);
 
   
   // On page load, load eventCreator contract
@@ -104,6 +104,9 @@ function App() {
           
           // Extract event data from event contract
           const thisEventData = {}
+          
+          thisEventData['owner'] = await thisEventContract.methods.owner().call()
+          thisEventData['stage'] = await thisEventContract.methods.stage().call()
           thisEventData['eventName'] = await thisEventContract.methods.name().call()
           thisEventData['eventSymbol'] = await thisEventContract.methods.symbol().call()
           thisEventData['numTicketsLeft'] = await thisEventContract.methods.numTicketsLeft().call()
@@ -129,21 +132,44 @@ function App() {
       async function getUserTickets() {
         // Get user tickets for each event
         console.log("TICKET BALANCES")
+        var allTickets = []
         for (var i = 0; i < eventContracts.length; i++) {
           let bal = await eventContracts[i].methods.balanceOf(account).call()
           console.log("Event Balance")
           console.log(i)
           console.log(bal['_hex']);
-          tickets.push({
+          allTickets.push({
             'eventNumber': i, 
             'eventName': eventData[i]['eventName'],
             'numTickets': bal['_hex']
           })
-          setThisTicket([i, bal])
         }
+        setTickets(allTickets)
       }
   
       getUserTickets()
+    }
+  }, [eventData])
+
+  useEffect(() => {
+    if (eventData !== null) {
+      function getUserEvents() {
+        console.log("INSIDE")
+        console.log(eventData)
+        console.log(eventData.length)
+        var userEvents = []
+        for (var i = 0; i < eventData.length; i++) {
+          console.log("COMPARISON")
+          console.log(account)
+          console.log(eventData[i]['owner'])
+          if (account === eventData[i]['owner']) {
+            userEvents.push(eventData[i])
+          }
+        }
+        setMyEvents(userEvents)
+      }
+
+      getUserEvents()
     }
   }, [eventData])
 
@@ -161,6 +187,22 @@ function App() {
     }
   }
 
+  // Allows user to update stage of event they created
+  async function updateEventStage(e, index) {
+    // Check that eventCreator
+    if (eventContracts[index] !== 'undefined') {
+      console.log("INSIDE UPDATE EVENT STAGE")
+      console.log(index)
+      console.log(eventContracts)
+      console.log(eventContracts[index])
+      try {
+        await eventContracts[index].methods.setStage(eventStage).send({ from: account })
+      } catch(e) {
+        console.log('Update event stage error: ', e)
+      }
+    }
+  }
+
   async function buyTicket(e, eventNumber) {
     console.log(eventNumber)
     // Check that eventCreator
@@ -171,7 +213,9 @@ function App() {
     console.log(await eventContract.methods.name.call())
 
     // if (eventContract)
-    const amount = eventData[eventNumber]['price']
+    const dollarAmount = eventData[eventNumber]['price'] + 500
+    const ETHAmount = dollarAmount * 0.00053
+    const amount = web3.utils.toWei(ETHAmount.toString(), 'ether')
     console.log("AMOUNT")
     console.log(amount)
     console.log(typeof amount)
@@ -180,116 +224,155 @@ function App() {
     console.log(typeof account)
     // await eventContract.methods.buyTicket().send({ from: account.toString() })
     // console.log(eventContract.methods.buyTicket())
-    await eventContract.methods.buyTicket().send({ value: amount, from: account })
+
+    try {
+      await eventContracts[eventNumber].methods.buyTicket().send({ value: amount, from: account })
+    } catch(e) {
+      console.log('Buy Ticket Error: ', e)
+    }
+    
+    //.send({value: amount.toString(), from: this.state.account })
+
+    // "Error: [ethjs-query] while formatting outputs from RPC 
+    // '{"value":{"code":-32603,"data":{"message":"VM Exception while processing transaction: revert","code":-32000,"data":{"0x35aa6befb0df546505cbc713a2bbe6e8cf92fc9adb89730c50ace58ffcd096b6":{"error":"revert","program_counter":6248,"return":"0x"},"stack":"RuntimeError: VM Exception while processing transaction: revert\n    at Function.RuntimeError.fromResults (/Applications/Ganache.app/Contents/Resources/static/node/node_modules/ganache-core/lib/utils/runtimeerror.js:94:13)\n    at BlockchainDouble.processBlock (/Applications/Ganache.app/Contents/Resources/static/node/node_modules/ganache-core/lib/blockchain_double.js:627:24)\n    at runMicrotasks (<anonymous>)\n    at processTicksAndRejections (internal/process/task_queues.js:93:5)","name":"RuntimeError"}}}}'"
 
   }
 
-
-    return (
-      <div>
-        <nav className="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
-          <p
-            className="navbar-brand col-sm-3 col-md-2 mr-0 mb-0"
-          >
-            TicketChain
-          </p>
-        </nav>
-        <div className="container-fluid mt-5">
-          <div className="row">
-            <main role="main" className="col-lg-12 d-flex text-center">
-              <div className="content mr-auto ml-auto">
-                <h1>Create an Event Now</h1>
-                  <form onSubmit={(e) => {
-                      e.preventDefault()
-                      createEvent(e)
-                  }}>
-                  <div className='form-group mr-sm-2'>
-                  <br></br>
-                    <input
-                      id='name'
-                      type='text'
-                      className="form-control form-control-md mb-2"
-                      placeholder='Event name'
-                      onChange={(e) => setFormEventName(e.target.value)}
-                    />
-                    <input
-                      id='symbol'
-                      type='text'
-                      className="form-control form-control-md mb-2"
-                      placeholder='Token symbol'
-                      onChange={(e) => setFormEventSymbol(e.target.value)}
-                    />
-                    <input
-                      id='numTickets'
-                      type='number'
-                      className="form-control form-control-md mb-2"
-                      placeholder='Number of Tickets'
-                      onChange={(e) => setFormNumTickets(e.target.value)}
-                    />
-                    <input
-                      id='price'
-                      type='number'
-                      className="form-control form-control-md mb-2"
-                      placeholder='Price'
-                      onChange={(e) => setFormPrice(e.target.value)}
-                    />
-                    <input
-                      id='canBeResold'
-                      type='text'
-                      className="form-control form-control-md mb-2"
-                      placeholder='Can the Tickets be resold?'
-                      onChange={(e) => setFormCanBeResold(e.target.value)}
-                    />
-                    <input
-                      id='royaltyPercent'
-                      type='number'
-                      className="form-control form-control-md mb-2"
-                      placeholder='Resale royalty (%)'
-                      onChange={(e) => setFormRoyaltyPercent(e.target.value)}
-                    />
-                  </div>
-                  <button type='submit' className='btn btn-primary mb-4'>CREATE EVENT</button>
-                </form>
-              </div>
-            </main>
-          </div>
-        </div>
-        <div div className="content mr-auto ml-auto">
-          <h1 className="text-center" pb="30px">All Events</h1>
-          <SimpleGrid columns={4} spacing={10}>
-            { 
-              eventData.map((id, index) => (
-                  <Box key={index} border="1px solid black" p="20px" width="20rem">
-                    <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
-                    <Text>Name: {id.eventName}</Text>
-                    <Text>Symbol: {id.eventSymbol}</Text>
-                    <button className='btn btn-primary mb-4' onClick={(e) => {
-                      e.preventDefault()
-                      buyTicket(e, index)
-                    }}>
-                      Buy Ticket
-                    </button>
-                  </Box>
-              ))
-            }
-          </SimpleGrid>
-        </div>
-        <div div className="content mr-auto ml-auto">
-          <h1 className="text-center" pb="30px">My Tickets</h1>
-          <SimpleGrid columns={4} spacing={10}>
-            { 
-              tickets.map((id, index) => (
-                  <Box key={index} border="1px solid black" p="20px" width="20rem">
-                    <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
-                    <Text>Event: {id.eventName}</Text>
-                    <Text>Number of Tickets: {id.numTickets}</Text>
-                  </Box>
-              ))
-            }
-          </SimpleGrid>
+  return (
+    <div>
+      <nav className="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
+        <p
+          className="navbar-brand col-sm-3 col-md-2 mr-0 mb-0"
+        >
+          TicketChain
+        </p>
+      </nav>
+      <div className="container-fluid mt-5">
+        <div className="row">
+          <main role="main" className="col-lg-12 d-flex text-center">
+            <div className="content mr-auto ml-auto">
+              <h1>Create an Event Now</h1>
+                <form onSubmit={(e) => {
+                    e.preventDefault()
+                    createEvent(e)
+                }}>
+                <div className='form-group mr-sm-2'>
+                <br></br>
+                  <input
+                    id='name'
+                    type='text'
+                    className="form-control form-control-md mb-2"
+                    placeholder='Event name'
+                    onChange={(e) => setFormEventName(e.target.value)}
+                  />
+                  <input
+                    id='symbol'
+                    type='text'
+                    className="form-control form-control-md mb-2"
+                    placeholder='Token symbol'
+                    onChange={(e) => setFormEventSymbol(e.target.value)}
+                  />
+                  <input
+                    id='numTickets'
+                    type='number'
+                    className="form-control form-control-md mb-2"
+                    placeholder='Number of Tickets'
+                    onChange={(e) => setFormNumTickets(e.target.value)}
+                  />
+                  <input
+                    id='price'
+                    type='number'
+                    className="form-control form-control-md mb-2"
+                    placeholder='Price'
+                    onChange={(e) => setFormPrice(e.target.value)}
+                  />
+                  <input
+                    id='canBeResold'
+                    type='text'
+                    className="form-control form-control-md mb-2"
+                    placeholder='Can the Tickets be resold?'
+                    onChange={(e) => setFormCanBeResold(e.target.value)}
+                  />
+                  <input
+                    id='royaltyPercent'
+                    type='number'
+                    className="form-control form-control-md mb-2"
+                    placeholder='Resale royalty (%)'
+                    onChange={(e) => setFormRoyaltyPercent(e.target.value)}
+                  />
+                </div>
+                <button type='submit' className='btn btn-primary mb-4'>CREATE EVENT</button>
+              </form>
+            </div>
+          </main>
         </div>
       </div>
-    );
+      <div div className="content mr-auto ml-auto">
+        <h1 className="text-center" pb="30px">All Events</h1>
+        <SimpleGrid columns={4} spacing={10}>
+          { 
+            eventData.map((id, index) => (
+                <Box key={index} border="1px solid black" p="20px" width="20rem">
+                  <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
+                  <Text>Name: {id.eventName}</Text>
+                  <Text>Symbol: {id.eventSymbol}</Text>
+                  <Text>Stage: {id.stage}</Text>
+                  <button className='btn btn-primary mb-4' onClick={(e) => {
+                    e.preventDefault()
+                    buyTicket(e, index)
+                  }}>
+                    Buy Ticket
+                  </button>
+                </Box>
+            ))
+          }
+        </SimpleGrid>
+      </div>
+      <div div className="content mr-auto ml-auto">
+        <h1 className="text-center" pb="30px">My Tickets</h1>
+        <SimpleGrid columns={4} spacing={10}>
+          { 
+            tickets.map((id, index) => (
+                <Box key={index} border="1px solid black" p="20px" width="20rem">
+                  <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
+                  <Text>Event: {id.eventName}</Text>
+                  <Text>Number of Tickets: {id.numTickets}</Text>
+                </Box>
+            ))
+          }
+        </SimpleGrid>
+      </div>
+      <div div className="content mr-auto ml-auto">
+        <h1 className="text-center" pb="30px">My Events</h1>
+        <SimpleGrid columns={4} spacing={10}>
+          { 
+            myEvents.map((id, index) => (
+              <Box key={index} border="1px solid black" p="20px" width="20rem">
+                <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
+                <Text>Event: {id.eventName}</Text>
+                <Text>Number of Tickets: {id.numTickets}</Text>
+                <form onSubmit={(e) => {
+                  e.preventDefault()
+                  updateEventStage(e, index)
+                }}>
+                  <div className='form-group mr-sm-2'>
+                    <input
+                      id='eventStage'
+                      type='number'
+                      className="form-control form-control-md mb-2"
+                      placeholder='Set Event Stage (Prep, Active, Paused, CheckinOpen, Cancelled, Closed)'
+                      onChange={(e) => setEventStage(e.target.value)}
+                    />
+                  </div>
+                  <button type='submit' className='btn btn-primary mb-4'>Set Event Stage</button>
+                </form>
+              </Box>
+            ))
+          }
+        </SimpleGrid>
+      </div>
+    </div>
+  );
 }
 
 export default App;

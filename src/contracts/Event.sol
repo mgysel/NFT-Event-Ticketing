@@ -24,7 +24,7 @@ contract EventCreator {
             string memory _eventName, string memory _eventSymbol) external returns(address newEvent) {
         // Create a new Event smart contract
         // NOTE: 'new' keyword creates a new SC and returns address
-        Event e = new Event(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol);
+        Event e = new Event(msg.sender, _numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol);
         
         // Store/return event address
         events.push(e);
@@ -101,9 +101,9 @@ contract Event is ERC721 {
     event TicketUsed(string sQRCodeKey);
 
     // Creates a new Event Contract
-    constructor(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent,
+    constructor(address _owner, uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent,
             string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
-        owner = msg.sender;
+        owner = _owner;
         numTicketsLeft = _numTickets;
         price = _price;
         canBeResold = _canBeResold;

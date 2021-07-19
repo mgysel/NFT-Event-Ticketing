@@ -22,7 +22,8 @@ require('chai')
 // async - to interact with blockchain, must use async calls
 contract('Event', (accounts) => {
     // Variables for creating the Event Contract
-    let event
+    let eventCreator;
+    let event;
     const _numTickets = 5;
     const _price = 50;
     const _canBeResold = true;
@@ -41,7 +42,7 @@ contract('Event', (accounts) => {
     const buyer7 = accounts[7];
 
     beforeEach(async () => {
-        event = await Event.new(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
+        event = await Event.new(owner, _numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
     })
 
     // Describe is a container for test examples
@@ -97,6 +98,8 @@ contract('Event', (accounts) => {
             const royalty = await event.royaltyPercent()
             expect(royalty).to.eql(expected)
         })
+
+        // TODO: Owner of contract is set correctly
 
     })
 
