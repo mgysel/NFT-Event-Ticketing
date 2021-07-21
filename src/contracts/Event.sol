@@ -75,7 +75,7 @@ contract Event is ERC721 {
     
     // Ticket struct 
     struct Ticket {
-        uint32 price;
+        uint32 ticketID;
         uint32 resalePrice;
         TicketStatus status;
     }
@@ -98,7 +98,7 @@ contract Event is ERC721 {
     event CreateTicket(address buyer, uint ticketID);
     event WithdrawalMoney(address receiver, uint money);
     event Refund(address organizer, address receiver, uint money);
-    event TicketUsed(string sQRCodeKey);
+    event TicketUsed(string eventName, string sQRCodeKey);
 
     // Creates a new Event Contract
     constructor(address _owner, uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent,
@@ -116,24 +116,23 @@ contract Event is ERC721 {
      */
     function buyTicket() public payable buyingTicketOpen ticketsLeft 
                                             hasEnoughMoney(msg.value) returns (uint){
+        uint32 ticketID = numTicketsLeft;
+
         // Create Ticket t
         Ticket memory t;
-        t.price = price;
+        t.ticketID = ticketID;
         t.resalePrice = price;
         t.status = TicketStatus.Valid;
 
         // Store t in tickets array, reduce numTicketsLeft
         tickets[msg.sender] = t;
-        uint ticketID = numTicketsLeft;
         numTicketsLeft--;
-
-        // TODO: Refund user if too much money
         
         // new added
         balances[owner] += price;
 
         // Mint NFT
-        _mint(msg.sender, ticketID);
+        _safeMint(msg.sender, ticketID);
         emit CreateTicket(msg.sender, ticketID);
         
         return ticketID;
@@ -157,15 +156,15 @@ contract Event is ERC721 {
     function setTicketToUsed(string memory sQRCodeKey) public requiredStage(Stages.CheckinOpen)
                                                                     returns (string memory){
 		Ticket memory ticket = tickets[msg.sender];
-		
-		// Validate that user has a ticket they own and it is valid
-        require(ticket.status == TicketStatus.Valid, "There is no valid ticket for this user");
+	
+	    // Burn the Token
+        _burn(ticket.ticketID);
         
         // Ticket is valid so mark it as used
         ticket.status = TicketStatus.Used;
         
         // Raise event which Gate Management system can consume then
-        emit TicketUsed(sQRCodeKey);
+        emit TicketUsed(name(), sQRCodeKey);
         
         return sQRCodeKey;
 	}
@@ -207,27 +206,42 @@ contract Event is ERC721 {
 
     // Requires stage to be _stage
     modifier requiredStage(Stages _stage) {
-        require(stage == _stage);
+        require(stage == _stage, "Event not in the correct stage for this action");
         _;
     }
     
     // Check if buying is open
     modifier buyingTicketOpen() {
-        require(stage == Stages.Active || stage == Stages.CheckinOpen);
+        require(stage == Stages.Active || stage == Stages.CheckinOpen, "Tickets are not open for sale");
         _;
     }
     
     // Requires there to be more than 0 tickets left
     modifier ticketsLeft() {
-        require(numTicketsLeft > 0);
+        require(numTicketsLeft > 0, "All tickets are sold");
         _;
     }
 
-    // Requires user to have enough money to purchase ticket
     modifier hasEnoughMoney(uint money) {
-        require(money >= price);
+        require(money >= price, "Transferred ether is not enough");
         _;
     }
-    
+
+    function toAsciiString(address x) internal view returns (string memory) {
+        bytes memory s = new bytes(40);
+        for (uint i = 0; i < 20; i++) {
+            bytes1 b = bytes1(uint8(uint(uint160(x)) / (2**(8*(19 - i)))));
+            bytes1 hi = bytes1(uint8(b) / 16);
+            bytes1 lo = bytes1(uint8(b) - 16 * uint8(hi));
+            s[2*i] = char(hi);
+            s[2*i+1] = char(lo);            
+        }
+        return string(s);
+    }
+
+    function char(bytes1 b) internal view returns (bytes1 c) {
+        if (uint8(b) < 10) return bytes1(uint8(b) + 0x30);
+        else return bytes1(uint8(b) + 0x57);
+    }
 }
 

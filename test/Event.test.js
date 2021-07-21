@@ -202,7 +202,7 @@ contract('Event', (accounts) => {
             // Prep (0) Stage
             await event.setStage(0)
             await event.setTicketToUsed(new BN('1')).should.be.rejectedWith(EVM_REVERT)
-            // Paused (1) Stage
+            // Active (1) Stage
             await event.setStage(1)
             await event.setTicketToUsed(new BN('1')).should.be.rejectedWith(EVM_REVERT)
             // Paused (2) Stage
@@ -222,7 +222,14 @@ contract('Event', (accounts) => {
         })
         
         it('checking ticket mark as used', async () => {
-            console.log(await event.tickets(buyer2));
+            console.log("owner" + owner);
+            console.log("buyer1" + buyer1);
+            console.log("buyer2" + buyer2);
+            console.log("buyer3" + buyer3);
+            console.log("buyer4" + buyer4);
+            console.log("buyer5" + buyer5);
+            console.log("buyer6" + buyer6);
+            console.log("buyer7" + buyer7);
             await event.setTicketToUsed({ sQRCodeKey: "12345", from: buyer1 })
         })
     })

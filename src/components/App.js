@@ -67,6 +67,7 @@ function App() {
 
       // Get Account, make sure there is a connection
       const accounts = await web3.eth.getAccounts()
+      console.log("account" + accounts);
       if (typeof accounts[0] !== 'undefined') {
         setAccount(accounts[0])
         const netId = await web3.eth.net.getId()
@@ -211,6 +212,7 @@ function App() {
 
     try {
       await eventContracts[eventNumber].methods.buyTicket().send({ value: amount, from: account })
+      loadEventCreator()
     } catch(e) {
       console.log('Buy Ticket Error: ', e)
     }
@@ -221,7 +223,7 @@ function App() {
     try {
       await eventContracts[eventNumber].methods.setTicketToUsed(sRandomHash).send({ from: account })
     } catch(e) {
-      console.log('Buy Ticket Error: ', e)
+      console.log('Set ticket to used: ', e)
     }
   }
 
@@ -304,6 +306,7 @@ function App() {
                   <Text>Name: {id.eventName}</Text>
                   <Text>Symbol: {id.eventSymbol}</Text>
                   <Text>Stage: {id.stage}</Text>
+                  <Text>Owner: {id.owner}</Text>
                   <button className='btn btn-primary mb-4' onClick={(e) => {
                     e.preventDefault()
                     buyTicket(e, index)
