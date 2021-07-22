@@ -32,10 +32,10 @@ function App() {
 
   const [formEventName, setFormEventName] = useState("");
   const [formEventSymbol, setFormEventSymbol] = useState("");
-  const [formNumTickets, setFormNumTickets] = useState("");
-  const [formPrice, setFormPrice] = useState("");
-  const [formCanBeResold, setFormCanBeResold] = useState("");
-  const [formRoyaltyPercent, setFormRoyaltyPercent] = useState("");
+  const [formNumTickets, setFormNumTickets] = useState(0);
+  const [formPrice, setFormPrice] = useState(0);
+  const [formCanBeResold, setFormCanBeResold] = useState(true);
+  const [formRoyaltyPercent, setFormRoyaltyPercent] = useState(0);
 
   const [sRandomHash, setSRandomHash] = useState("");
   const [eventStage, setEventStage] = useState(0);
@@ -301,8 +301,12 @@ function App() {
             eventData.map((id, index) => (
                 <Box key={index} border="1px solid black" p="20px" width="20rem">
                   <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
-                  <Text>Name: {id.eventName}</Text>
-                  <Text>Symbol: {id.eventSymbol}</Text>
+                  <Text>Name: {id.eventName} ({typeof(id.eventName)})</Text>
+                  <Text>Symbol: {id.eventSymbol} ({typeof(id.eventSymbol)})</Text>
+                  <Text>Number of Tickets: {id.numTicketsLeft} ({typeof(id.numTicketsLeft)})</Text>
+                  <Text>Price: {id.price} ({typeof(id.price)})</Text>
+                  <Text>Can Be Resold?: {id.canBeResold} ({typeof(id.canBeResold)})</Text>
+                  <Text>Royalty Percent: {id.royaltyPercent} ({typeof(id.royaltyPercent)})</Text>
                   <Text>Stage: {id.stage}</Text>
                   <button className='btn btn-primary mb-4' onClick={(e) => {
                     e.preventDefault()
