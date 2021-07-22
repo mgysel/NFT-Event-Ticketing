@@ -93,6 +93,7 @@ contract Event is ERC721 {
     
     // to store the balances for buyers and organizers
     mapping(address => uint256) balances;
+    mapping(address => bool) isUserRefunded;
 
     // EVENTS
     event CreateTicket(address buyer, uint ticketID);
@@ -126,20 +127,14 @@ contract Event is ERC721 {
         tickets[msg.sender] = t;
         uint ticketID = numTicketsLeft;
         numTicketsLeft--;
-        
-        // new added
-        balances[owner] += price;
 
         // Mint NFT
         _mint(msg.sender, ticketID);
         emit CreateTicket(msg.sender, ticketID);
 
-        // TODO: Is this safe? Does it matter what order this goes in?
-        // I think safe, because wouldn't they have to pay 
-        // for another ticket to get any money sent back?
-        address payable ticketBuyer = payable(msg.sender);
+        // If user overpaid, add difference to balances
         if (msg.value > price) {
-            ticketBuyer.transfer(msg.value - price);
+            balances[owner] = msg.value - price;
         }
         
         return ticketID;
@@ -174,6 +169,7 @@ contract Event is ERC721 {
         return sQRCodeKey;
 	}
 	
+    // TODO - WHY DO WE NEED REFUND? 
     /**
      * @notice Refund money to buyers
      * @dev once the event is cancelled, organizer should refund money to buyers
@@ -190,13 +186,27 @@ contract Event is ERC721 {
     }
 
     /**
-     * @notice For user and organizer to withdraw money from their account
-     * @param money Amount of ether to refund 
+     * @notice For user to withdraw money from their account
      */
-    function withdrawal(uint money) public requiredStage(Stages.Cancelled) returns (bool success){
-        require(balances[msg.sender] >= money, "Not enough money");
-        emit WithdrawalMoney(msg.sender, money);
-        balances[msg.sender] -= money;
+    function withdrawal() public returns (bool success) {
+        // Amount to send to user
+        uint sendToUser = balances[msg.sender];
+        balances[msg.sender] = 0;
+        
+        // If event cancelled, send user the amount they overpaid for ticket + ticket price refund
+        if (stage == Stages.Cancelled) {
+            isUserRefunded[msg.sender] = true;
+            sendToUser += price;
+        }
+
+        // Transfer money to user
+        address payable receiver = payable(msg.sender);
+        bool sent = receiver.send(sendToUser);
+        // Failure condition of send will emit this error
+        require(sent, "Failed to send ether to user");
+
+        emit WithdrawalMoney(msg.sender, sendToUser);
+        
         return true;
     }
 
