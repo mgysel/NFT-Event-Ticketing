@@ -222,8 +222,14 @@ contract('Event', (accounts) => {
         })
         
         it('checking ticket mark as used', async () => {
-            console.log(await event.tickets(buyer2));
-            await event.setTicketToUsed({ sQRCodeKey: "12345", from: buyer1 })
+            console.log("GET BUYER 1 TICKETS BEFORE")
+            console.log(await event.tickets(buyer1));
+            await event.buyTicket({ value: (_price), from: buyer1 }) 
+            console.log("GET BUYER 1 TICKETS AFTER")
+            console.log(await event.tickets(buyer1));
+            const qrCode = await event.setTicketToUsed({ sQRCodeKey: "12345", from: buyer1 })
+            // console.log("QR CODE")
+            // console.log(qrCode)
         })
     })
 })

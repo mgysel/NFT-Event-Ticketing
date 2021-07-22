@@ -122,12 +122,10 @@ contract Event is ERC721 {
         t.resalePrice = price;
         t.status = TicketStatus.Valid;
 
-        // Store t in tickets array, reduce numTicketsLeft
+        // Store t in tickets mapping, reduce numTicketsLeft
         tickets[msg.sender] = t;
         uint ticketID = numTicketsLeft;
         numTicketsLeft--;
-
-        // TODO: Refund user if too much money
         
         // new added
         balances[owner] += price;
@@ -135,6 +133,14 @@ contract Event is ERC721 {
         // Mint NFT
         _mint(msg.sender, ticketID);
         emit CreateTicket(msg.sender, ticketID);
+
+        // TODO: Is this safe? Does it matter what order this goes in?
+        // I think safe, because wouldn't they have to pay 
+        // for another ticket to get any money sent back?
+        address payable ticketBuyer = payable(msg.sender);
+        if (msg.value > price) {
+            ticketBuyer.transfer(msg.value - price);
+        }
         
         return ticketID;
     }
@@ -156,14 +162,12 @@ contract Event is ERC721 {
      */
     function setTicketToUsed(string memory sQRCodeKey) public requiredStage(Stages.CheckinOpen)
                                                                     returns (string memory){
-		Ticket memory ticket = tickets[msg.sender];
-		
 		// Validate that user has a ticket they own and it is valid
-        require(ticket.status == TicketStatus.Valid, "There is no valid ticket for this user");
-        
+        require (tickets[msg.sender].status == TicketStatus.Valid, "There is no valid ticket for this user");
+
         // Ticket is valid so mark it as used
-        ticket.status = TicketStatus.Used;
-        
+        tickets[msg.sender].status = TicketStatus.Used;
+
         // Raise event which Gate Management system can consume then
         emit TicketUsed(sQRCodeKey);
         
@@ -189,7 +193,7 @@ contract Event is ERC721 {
      * @notice For user and organizer to withdraw money from their account
      * @param money Amount of ether to refund 
      */
-    function withdrawal(uint money) public returns (bool success){
+    function withdrawal(uint money) public requiredStage(Stages.Cancelled) returns (bool success){
         require(balances[msg.sender] >= money, "Not enough money");
         emit WithdrawalMoney(msg.sender, money);
         balances[msg.sender] -= money;
@@ -216,7 +220,7 @@ contract Event is ERC721 {
         require(stage == Stages.Active || stage == Stages.CheckinOpen);
         _;
     }
-    
+
     // Requires there to be more than 0 tickets left
     modifier ticketsLeft() {
         require(numTicketsLeft > 0);
