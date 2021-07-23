@@ -425,6 +425,103 @@ contract('Event', (accounts) => {
         })
 
     })
+
+    describe('owner withdraw', async () => {
+
+        // Non-owner cannot withdraw money
+        it('non-owner cannot withdraw money', async () => {
+            await event.ownerWithdraw({ from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
+        })
+        
+        // Owner cannot withdraw money if stage is not closed 
+        it('owner cannot withdraw money if stage is not closed', async () => {
+            // Prep (0) Stage
+            await event.setStage(0)
+            await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+            // Active (1) Stage
+            await event.setStage(1)
+            await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+            // Paused (2) Stage
+            await event.setStage(2)
+            await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+            // Checkin Open (3) Stage
+            await event.setStage(3)
+            await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+            // Cancelled (4) Stage
+            await event.setStage(4)
+            await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+        })
+
+        it('owner cannot withdraw money if no money in account', async () => {
+            await event.setStage(5)
+            await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+        })
+
+        // Owner withdraw money after tickets purchased
+        it('owner successfully withdraws money', async () => {
+            // User buys ticket
+            await event.setStage(1)
+            await event.buyTicket({ value: _price, from: buyer2 })
+            
+            // Event closed
+            await event.setStage(5)
+
+            // Check user SC balance before and after withdraw
+            const beforeSC = parseInt(await web3.eth.getBalance(event.address))
+            const beforeOwner = web3.utils.toBN(await web3.eth.getBalance(owner))
+            
+            const receipt = await event.ownerWithdraw({ from: owner })
+            const gasUsed = web3.utils.toBN(receipt.receipt.gasUsed)
+            const tx = await web3.eth.getTransaction(receipt.tx)
+            const gasPrice = web3.utils.toBN(tx.gasPrice)
+            const txFee = gasPrice.mul(gasUsed);
+
+            const afterSC = parseInt(await web3.eth.getBalance(event.address))
+            const afterOwner = web3.utils.toBN(await web3.eth.getBalance(owner))
+
+            const beforeOwnerAddDiff = beforeOwner.sub(txFee).add(web3.utils.toBN(_price))
+
+            // Check user's own account balance before and after withdraw
+            assert.equal(beforeSC, _price, 'Smart contract balance not correct after user buys ticket')
+            assert.equal(afterSC, 0, 'Smart contract balance not correct after owner withdraws')
+            assert.equal(afterOwner.toString(), beforeOwnerAddDiff.toString(), 'Owner should withdraw correct amount') 
+        })
+
+        // Owner withdraw money after tickets purchased
+        it('owner cannot withdraw twice', async () => {
+            // User buys ticket
+            await event.setStage(1)
+            await event.buyTicket({ value: _price, from: buyer2 })
+            
+            // Event closed
+            await event.setStage(5)
+            
+            await event.ownerWithdraw({ from: owner })
+            await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+        })
+
+        // Withdraw money emits event
+        it('event emitted when owner withdraws money', async () => {
+            await event.setStage(1)
+            await event.buyTicket({ value: _price, from: buyer2 })
+            await event.setStage(5)
+            const withdraw = await event.ownerWithdraw({ from: owner })
+
+            truffleAssert.eventEmitted(withdraw, 'OwnerWithdrawMoney', (ev) => {
+                // Check receiver address
+                const owner_expected = owner.toString()
+                const owner_actual = ev['owner'].toString()
+
+                // Checking money refuned
+                const money_expected = _price.toString()
+                const money_actual = ev['money'].toString()
+
+                return money_actual === money_expected && owner_actual === owner_expected
+            })
+        })
+
+
+    })
 })
 
 // Event Creator testing

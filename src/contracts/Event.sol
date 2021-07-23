@@ -90,7 +90,7 @@ contract Event is ERC721 {
     mapping(address => Ticket) public tickets;
     
     bool public canBeResold;
-    address public owner;
+    address payable public owner;
     
     // to store the balances for buyers and organizers
     mapping(address => uint) public balances;
@@ -99,7 +99,7 @@ contract Event is ERC721 {
     // EVENTS
     event CreateTicket(address buyer, uint ticketID);
     event WithdrawMoney(address receiver, uint money);
-    event Refund(address organizer, address receiver, uint money);
+    event OwnerWithdrawMoney(address owner, uint money);
     event TicketUsed(string sQRCodeKey);
 
     // Creates a new Event Contract
@@ -116,7 +116,7 @@ contract Event is ERC721 {
         require(eventNameBytes.length != 0, "Event Name cannot be empty");
         require(eventSymbolBytes.length != 0, "Event Symbol cannot be empty");
         
-        owner = _owner;
+        owner = payable(_owner);
         numTicketsLeft = _numTickets;
         price = _price;
         canBeResold = _canBeResold;
@@ -186,20 +186,25 @@ contract Event is ERC721 {
     /**
      * @notice Refund money to buyers
      * @dev once the event is cancelled, organizer should refund money to buyers
-     * @param receiver Receiver of the ether
-     * @param money Amount of ether to refund 
      */
-    function refund(address receiver, uint money) public onlyOwner returns (bool success){
-        require (money > 0);
-        require(balances[msg.sender] >= money, "Not enough money");
-        emit Refund(msg.sender, receiver, money);
-        balances[msg.sender] -= money;
-        balances[receiver] += money;
+    function ownerWithdraw() public onlyOwner requiredStage(Stages.Closed) returns (bool success){
+        uint contractBalance = address(this).balance;
+        require(contractBalance > 0, "No money in smart contract account");
+        
+        // Transfer money to owner
+        bool sent = owner.send(contractBalance);
+        // Failure condition if cannot transfer
+        require(sent, "Failed to send ether to owner");
+
+        emit OwnerWithdrawMoney(msg.sender, contractBalance);
+
         return true;
     }
 
+    // TODO: DOES THIS NEED TO RETURN BOOLEAN? IF IT FAILS THERE WILL BE AN ERROR
     /**
-     * @notice For user to withdraw money from their account
+     * @notice User to withdraw money 
+     * @dev User can withdraw money if event cancelled or overpaid for ticket
      */
     function withdraw() public returns (bool success) {
         // Amount to send to user
