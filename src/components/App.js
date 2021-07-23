@@ -22,6 +22,7 @@ import EventCreator from '../abis/EventCreator.json'
 function App() {
   const [web3, setWeb3] = useState("undefined");
   const [account, setAccount] = useState("");
+  const [balance, setBalance] = useState("");
   const [netId, setNetId] = useState("");
   const [eventCreator, setEventCreator] = useState("");
   const [eventContracts, setEventContracts] = useState([]);
@@ -69,6 +70,7 @@ function App() {
       const accounts = await web3.eth.getAccounts()
       if (typeof accounts[0] !== 'undefined') {
         setAccount(accounts[0])
+        setBalance(await web3.eth.getBalance(accounts[0]))
         const netId = await web3.eth.net.getId()
         setNetId(netId)
 
@@ -106,6 +108,7 @@ function App() {
           // Extract event data from event contract
           const thisEventData = {}
           
+          thisEventData['balance'] = await web3.eth.getBalance(eventAddresses[i])
           thisEventData['owner'] = await thisEventContract.methods.owner().call()
           thisEventData['stage'] = await thisEventContract.methods.stage().call()
           thisEventData['eventName'] = await thisEventContract.methods.name().call()
@@ -192,10 +195,6 @@ function App() {
   async function updateEventStage(e, index) {
     // Check that eventCreator
     if (eventContracts[index] !== 'undefined') {
-      console.log("INSIDE UPDATE EVENT STAGE")
-      console.log(index)
-      console.log(eventContracts)
-      console.log(eventContracts[index])
       try {
         await eventContracts[index].methods.setStage(eventStage).send({ from: account })
       } catch(e) {
@@ -206,9 +205,7 @@ function App() {
 
   // Allows user to purchase ticket
   async function buyTicket(e, eventNumber) {
-    
     const amount = eventData[eventNumber]['price']
-
     try {
       await eventContracts[eventNumber].methods.buyTicket().send({ value: amount, from: account })
     } catch(e) {
@@ -225,13 +222,35 @@ function App() {
     }
   }
 
+  // Allows owner to withdraw from smart contract
+  async function ownerWithdraw(e, eventNumber) {
+    try {
+      await eventContracts[eventNumber].methods.ownerWithdraw().send({ from: account })
+    } catch(e) {
+      console.log('Owner withdraw error: ', e)
+    }
+  }
+
+  // Allows user to withdraw from smart contract
+  async function withdraw(e, eventNumber) {
+    try {
+      await eventContracts[eventNumber].methods.withdraw().send({ from: account })
+    } catch(e) {
+      console.log('Owner withdraw error: ', e)
+    }
+  }
+
   return (
     <div>
       <nav className="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
-        <p
-          className="navbar-brand col-sm-3 col-md-2 mr-0 mb-0"
-        >
+        <p className="navbar-brand col-sm-3 col-md-2 mr-0 mb-0">
           TicketChain
+        </p>
+        <p className="navbar-brand col-sm-3 col-md-2 mr-0 mb-0">
+          User: {account}
+        </p>
+        <p className="navbar-brand col-sm-3 col-md-2 mr-0 mb-0">
+          Balance: {balance}
         </p>
       </nav>
       <div className="container-fluid mt-5">
@@ -307,12 +326,12 @@ function App() {
             eventData.map((id, index) => (
                 <Box key={index} border="1px solid black" p="20px" width="20rem">
                   <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
-                  <Text>Name: {id.eventName} ({typeof(id.eventName)})</Text>
-                  <Text>Symbol: {id.eventSymbol} ({typeof(id.eventSymbol)})</Text>
-                  <Text>Number of Tickets: {id.numTicketsLeft} ({typeof(id.numTicketsLeft)})</Text>
-                  <Text>Price: {id.price} ({typeof(id.price)})</Text>
-                  <Text>Can Be Resold?: {id.canBeResold} ({typeof(id.canBeResold)})</Text>
-                  <Text>Royalty Percent: {id.royaltyPercent} ({typeof(id.royaltyPercent)})</Text>
+                  <Text>Name: {id.eventName}</Text>
+                  <Text>Symbol: {id.eventSymbol}</Text>
+                  <Text>Number of Tickets: {id.numTicketsLeft}</Text>
+                  <Text>Price: {id.price}</Text>
+                  <Text>Can Be Resold?: {id.canBeResold}</Text>
+                  <Text>Royalty Percent: {id.royaltyPercent}</Text>
                   <Text>Stage: {id.stage}</Text>
                   <button className='btn btn-primary mb-4' onClick={(e) => {
                     e.preventDefault()
@@ -349,6 +368,12 @@ function App() {
                     </div>
                     <button type='submit' className='btn btn-primary mb-4'>Set Ticket To Used</button>
                   </form>
+                  <button className='btn btn-primary mb-4' onClick={(e) => {
+                    e.preventDefault()
+                    withdraw(e, index)
+                  }}>
+                      Withdraw
+                  </button>
                 </Box>
 
             ))
@@ -363,7 +388,8 @@ function App() {
               <Box key={index} border="1px solid black" p="20px" width="20rem">
                 <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
                 <Text>Event: {id.eventName}</Text>
-                <Text>Number of Tickets: {id.numTickets}</Text>
+                <Text>Balance: {id.balance}</Text>
+                <Text>Number of Tickets Left: {id.numTicketsLeft}</Text>
                 <form onSubmit={(e) => {
                   e.preventDefault()
                   updateEventStage(e, index)
@@ -379,6 +405,12 @@ function App() {
                   </div>
                   <button type='submit' className='btn btn-primary mb-4'>Set Event Stage</button>
                 </form>
+                <button className='btn btn-primary mb-4' onClick={(e) => {
+                    e.preventDefault()
+                    ownerWithdraw(e, index)
+                }}>
+                    Owner Withdraw
+                </button>
               </Box>
             ))
           }
