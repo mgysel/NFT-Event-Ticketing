@@ -184,10 +184,9 @@ contract Event is ERC721 {
         return sQRCodeKey;
 	}
 	
-    // TODO - WHY DO WE NEED REFUND? 
     /**
-     * @notice Refund money to buyers
-     * @dev once the event is cancelled, organizer should refund money to buyers
+     * @notice Allows owner to withdraw money
+     * @dev once the event is closed, owner can withdraw money from SC account
      */
     function ownerWithdraw() public onlyOwner requiredStage(Stages.Closed) returns (bool success){
         // Make sure owner did not already withdraw
