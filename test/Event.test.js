@@ -62,6 +62,13 @@ contract('Event', (accounts) => {
 
     describe('constructor', async () => {
 
+        it('checking contract owner set correctly', async () => {
+            // Get first account from Ganache
+            const expected = owner
+            const actual = await event.owner()
+            expect(actual).to.eql(expected)
+        })
+
         it('checking eventName', async () => {
             assert.equal(await event.name(), _eventName, 'Event name in smart contract should match event name defined in constructor')
         })
@@ -99,9 +106,23 @@ contract('Event', (accounts) => {
             expect(royalty).to.eql(expected)
         })
 
-        // TODO: Owner of contract is set correctly
 
         // TODO: constructor arguments are valid (this should make sure no overflow)
+        it('invalid constructor arguments', async() => {
+            // Owner must be address
+            const invalidNumTickets = 0
+            await Event.new(owner, invalidNumTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol).should.be.rejectedWith(EVM_REVERT)
+
+            const invalidRoyaltyPercent = 101 
+            await Event.new(owner, _numTickets, _price, _canBeResold, invalidRoyaltyPercent, _eventName, _eventSymbol).should.be.rejectedWith(EVM_REVERT)
+
+            const invalidEventName = ''
+            await Event.new(owner, _numTickets, _price, _canBeResold, _royaltyPercent, invalidEventName, _eventSymbol).should.be.rejectedWith(EVM_REVERT)
+
+            const invalidEventSymbol = ''
+            await Event.new(owner, _numTickets, _price, _canBeResold, _royaltyPercent, _eventName, invalidEventSymbol).should.be.rejectedWith(EVM_REVERT)
+        })
+
 
     })
 

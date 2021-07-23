@@ -246,6 +246,7 @@ function App() {
                 <div className='form-group mr-sm-2'>
                 <br></br>
                   <input
+                    required
                     id='name'
                     type='text'
                     className="form-control form-control-md mb-2"
@@ -253,6 +254,7 @@ function App() {
                     onChange={(e) => setFormEventName(e.target.value)}
                   />
                   <input
+                    required
                     id='symbol'
                     type='text'
                     className="form-control form-control-md mb-2"
@@ -260,6 +262,7 @@ function App() {
                     onChange={(e) => setFormEventSymbol(e.target.value)}
                   />
                   <input
+                    required
                     id='numTickets'
                     type='number'
                     className="form-control form-control-md mb-2"
@@ -267,6 +270,7 @@ function App() {
                     onChange={(e) => setFormNumTickets(e.target.value)}
                   />
                   <input
+                    required
                     id='price'
                     type='number'
                     className="form-control form-control-md mb-2"
@@ -274,6 +278,7 @@ function App() {
                     onChange={(e) => setFormPrice(e.target.value)}
                   />
                   <input
+                    required
                     id='canBeResold'
                     type='text'
                     className="form-control form-control-md mb-2"
@@ -281,6 +286,7 @@ function App() {
                     onChange={(e) => setFormCanBeResold(e.target.value)}
                   />
                   <input
+                    required
                     id='royaltyPercent'
                     type='number'
                     className="form-control form-control-md mb-2"

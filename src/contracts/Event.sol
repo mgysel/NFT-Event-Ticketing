@@ -20,8 +20,9 @@ contract EventCreator {
      * @param _eventName Name of the Ticket NFT
      * @param _eventSymbol Symbol for the Ticket NFT Token
      */
-    function createEvent(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent,
+    function createEvent(uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
             string memory _eventName, string memory _eventSymbol) external returns(address newEvent) {
+
         // Create a new Event smart contract
         // NOTE: 'new' keyword creates a new SC and returns address
         Event e = new Event(msg.sender, _numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol);
@@ -83,7 +84,7 @@ contract Event is ERC721 {
     uint32 public price;
     
     /// Percent royalty event creator receives from ticket resales
-    uint32 public royaltyPercent;
+    uint8 public royaltyPercent;
     
     // For each user, store corresponding ticket struct
     mapping(address => Ticket) public tickets;
@@ -102,8 +103,19 @@ contract Event is ERC721 {
     event TicketUsed(string sQRCodeKey);
 
     // Creates a new Event Contract
-    constructor(address _owner, uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent,
+    constructor(address _owner, uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
             string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
+        
+        // Check valid constructor arguments
+        require(_royaltyPercent >= 0 && _royaltyPercent <= 100, "Royalty Percentage must be between 0 and 100");
+        // Number of tickets must be greater than 0
+        require(_numTickets > 0, "The number of tickets must be greater than 0");
+        // EventName, EventSymbol cannot be empty string
+        bytes memory eventNameBytes = bytes(_eventName);
+        bytes memory eventSymbolBytes = bytes(_eventSymbol);
+        require(eventNameBytes.length != 0, "Event Name cannot be empty");
+        require(eventSymbolBytes.length != 0, "Event Symbol cannot be empty");
+        
         owner = _owner;
         numTicketsLeft = _numTickets;
         price = _price;
@@ -228,25 +240,25 @@ contract Event is ERC721 {
 
     // Requires stage to be _stage
     modifier requiredStage(Stages _stage) {
-        require(stage == _stage);
+        require(stage == _stage, "Cannot execute function at this stage");
         _;
     }
     
     // Check if buying is open
     modifier buyingTicketOpen() {
-        require(stage == Stages.Active || stage == Stages.CheckinOpen);
+        require(stage == Stages.Active || stage == Stages.CheckinOpen, "Cannot buy ticket at this stage");
         _;
     }
 
     // Requires there to be more than 0 tickets left
     modifier ticketsLeft() {
-        require(numTicketsLeft > 0);
+        require(numTicketsLeft > 0, "There are 0 tickets left");
         _;
     }
 
     // Requires user to have enough money to purchase ticket
     modifier hasEnoughMoney(uint money) {
-        require(money >= price);
+        require(money >= price, "Not enough money to purchase a ticket");
         _;
     }
     
