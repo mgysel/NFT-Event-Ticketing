@@ -59,6 +59,7 @@ function App() {
   async function loadEventCreator() {
     if (typeof window.ethereum !== 'undefined') {
       // Connect to blockchain
+        
       const web3 = new Web3(window.ethereum)
       setWeb3(web3)
 
@@ -95,6 +96,8 @@ function App() {
   useEffect(() => {
     if (eventAddresses !== null) {
       async function createEventContracts() {
+        var ether_port = 'ws://localhost:8545';
+        var web3Subscription = new Web3(new Web3.providers.WebsocketProvider(ether_port));
         // Create event contract from each event address, store in eventContracts
         // Get event data from each event contract, store in eventData
         var allEventContracts = []
@@ -103,6 +106,27 @@ function App() {
           // Create event contract from event abi, address
           const thisEventContract = new web3.eth.Contract(Event.abi, eventAddresses[i])
           allEventContracts.push(thisEventContract)
+          
+          var oEventContract = new web3Subscription.eth.Contract(Event.abi, eventAddresses[i])
+          oEventContract.events.TicketUsed().on("connected", function () {
+            console.log("listening on event temperatureRequest");
+        }).on("data", (event) => {console.log("event fired: " + JSON.stringify(event.returnValues)); debugger;});
+          //console.log(thisEventContract.events);
+          // Register Oracle Listener
+          /*thisEventContract.events["TicketUsed(string,string)"]()
+                .on("connected", function (subscriptionId: any) {
+                    console.log("listening on event TicketUsed");
+                })
+                .on("data", async function (event: any) {
+                    console.log("Event fired data:");
+                    console.log(event.returnValues);
+                    /// TODO respond with temperature by calling responsePhase(int256)
+                })
+                .on("error", function (error: any, receipt: any) {
+                    console.log(error);
+                    console.log(receipt);
+                    console.log("error listening on event TicketUsed");
+                });*/
           
           // Extract event data from event contract
           const thisEventData = {}
