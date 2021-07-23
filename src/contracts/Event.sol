@@ -93,6 +93,7 @@ contract Event is ERC721 {
     address payable public owner;
     
     // to store the balances for buyers and organizers
+    uint totalBalances = 0;
     mapping(address => uint) public balances;
     mapping(address => bool) public isUserRefunded;
 
@@ -148,6 +149,7 @@ contract Event is ERC721 {
         // If user overpaid, add difference to balances
         if (msg.value > price) {
             balances[msg.sender] = msg.value - price;
+            totalBalances += (msg.value - price);
         }
         
         return ticketID;
@@ -188,15 +190,21 @@ contract Event is ERC721 {
      * @dev once the event is cancelled, organizer should refund money to buyers
      */
     function ownerWithdraw() public onlyOwner requiredStage(Stages.Closed) returns (bool success){
-        uint contractBalance = address(this).balance;
-        require(contractBalance > 0, "No money in smart contract account");
+        // Make sure owner did not already withdraw
+        require(isUserRefunded[owner] == false, "Owner has already withdrawn money");
+        isUserRefunded[owner] = true;
         
+        // Require smart contract balance - amount users overpaid > 0
+        // Otherwise, there is no money for owner to refund
+        uint sendToOwner = address(this).balance - totalBalances;
+        require(sendToOwner > 0, "No money in smart contract account");
+
         // Transfer money to owner
-        bool sent = owner.send(contractBalance);
+        bool sent = owner.send(sendToOwner);
         // Failure condition if cannot transfer
         require(sent, "Failed to send ether to owner");
 
-        emit OwnerWithdrawMoney(msg.sender, contractBalance);
+        emit OwnerWithdrawMoney(msg.sender, sendToOwner);
 
         return true;
     }
@@ -207,11 +215,12 @@ contract Event is ERC721 {
      * @dev User can withdraw money if event cancelled or overpaid for ticket
      */
     function withdraw() public returns (bool success) {
-        // Amount to send to user
+        // Amount user overpaid for ticket
         uint sendToUser = balances[msg.sender];
 
         // Update balance before sending money
         balances[msg.sender] = 0;
+        totalBalances -= balances[msg.sender];
         
         // If event cancelled, send user the amount they overpaid for ticket + ticket price refund
         if ((stage == Stages.Cancelled || stage == Stages.Paused) && isUserRefunded[msg.sender] == false) {
