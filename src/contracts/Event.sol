@@ -92,12 +92,12 @@ contract Event is ERC721 {
     address public owner;
     
     // to store the balances for buyers and organizers
-    mapping(address => uint256) balances;
-    mapping(address => bool) isUserRefunded;
+    mapping(address => uint) public balances;
+    mapping(address => bool) public isUserRefunded;
 
     // EVENTS
     event CreateTicket(address buyer, uint ticketID);
-    event WithdrawalMoney(address receiver, uint money);
+    event WithdrawMoney(address receiver, uint money);
     event Refund(address organizer, address receiver, uint money);
     event TicketUsed(string sQRCodeKey);
 
@@ -123,18 +123,19 @@ contract Event is ERC721 {
         t.resalePrice = price;
         t.status = TicketStatus.Valid;
 
-        // Store t in tickets mapping, reduce numTicketsLeft
-        tickets[msg.sender] = t;
         uint ticketID = numTicketsLeft;
-        numTicketsLeft--;
 
         // Mint NFT
         _mint(msg.sender, ticketID);
         emit CreateTicket(msg.sender, ticketID);
 
+        // Store t in tickets mapping, reduce numTicketsLeft
+        tickets[msg.sender] = t;
+        numTicketsLeft--;
+
         // If user overpaid, add difference to balances
         if (msg.value > price) {
-            balances[owner] = msg.value - price;
+            balances[msg.sender] = msg.value - price;
         }
         
         return ticketID;
@@ -188,16 +189,22 @@ contract Event is ERC721 {
     /**
      * @notice For user to withdraw money from their account
      */
-    function withdrawal() public returns (bool success) {
+    function withdraw() public returns (bool success) {
         // Amount to send to user
         uint sendToUser = balances[msg.sender];
+
+        // Update balance before sending money
         balances[msg.sender] = 0;
         
         // If event cancelled, send user the amount they overpaid for ticket + ticket price refund
-        if (stage == Stages.Cancelled) {
+        if ((stage == Stages.Cancelled || stage == Stages.Paused) && isUserRefunded[msg.sender] == false) {
+            // Update isUserRefunded before sending money
             isUserRefunded[msg.sender] = true;
             sendToUser += price;
         }
+
+        // Cannot withdraw if no money to withdraw
+        require(sendToUser > 0, "User does not have money to withdraw");
 
         // Transfer money to user
         address payable receiver = payable(msg.sender);
@@ -205,7 +212,7 @@ contract Event is ERC721 {
         // Failure condition of send will emit this error
         require(sent, "Failed to send ether to user");
 
-        emit WithdrawalMoney(msg.sender, sendToUser);
+        emit WithdrawMoney(msg.sender, sendToUser);
         
         return true;
     }
