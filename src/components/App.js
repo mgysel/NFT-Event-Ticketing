@@ -520,7 +520,7 @@ function App() {
                             id='eventStage'
                             type='number'
                             size="md"
-                            placeholder='Set Random Number'
+                            placeholder='Set Event Stage'
                             onChange={(e) => setEventStage(e.target.value)}
                             mb="0px"
                             mt="10px"
