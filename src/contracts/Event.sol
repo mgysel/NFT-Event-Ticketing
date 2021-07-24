@@ -224,10 +224,11 @@ contract Event is ERC721 {
         totalBalances -= balances[msg.sender];
         
         // If event cancelled, send user the amount they overpaid for ticket + ticket price refund
-        if ((stage == Stages.Cancelled || stage == Stages.Paused || stage == Stages.Closed) && isUserRefunded[msg.sender] == false) {
+        if ((stage == Stages.Cancelled || stage == Stages.Paused) && isUserRefunded[msg.sender] == false) {
             // Update isUserRefunded before sending money
             isUserRefunded[msg.sender] = true;
             sendToUser += (price * numTicketsBought[msg.sender]);
+            numTicketsBought[msg.sender] = 0;
         }
 
         // Cannot withdraw if no money to withdraw

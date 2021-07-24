@@ -402,7 +402,13 @@ function App() {
               <SimpleGrid columns={4} spacing={10} mt="30px">
                 { 
                   eventData.map((id, index) => (
-                      <Box key={index} border="1px solid black" p="20px" width="20rem">
+                      <Box key={index}        
+                        borderRadius="5px"
+                        border="1px solid"
+                        borderColor="gray.200"
+                        p="20px" 
+                        width="20rem"
+                      >
                         <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
                         <Text>Name: {id.eventName}</Text>
                         <Text>Symbol: {id.eventSymbol}</Text>
@@ -411,12 +417,19 @@ function App() {
                         <Text>Can Be Resold?: {id.canBeResold}</Text>
                         <Text>Royalty Percent: {id.royaltyPercent}</Text>
                         <Text>Stage: {id.stage}</Text>
-                        <button className='btn btn-primary mb-4' onClick={(e) => {
-                          e.preventDefault()
-                          buyTicket(e, index)
-                        }}>
-                          Buy Ticket
-                        </button>
+                        <Button 
+                          type='submit' 
+                          color={darkGreen}
+                          backgroundColor={lightGreen}
+                          size="lg"
+                          mt="10px"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            buyTicket(e, index)
+                          }}
+                        >
+                            Buy Ticket
+                        </Button>
                       </Box>
                   ))
                 }
@@ -427,31 +440,57 @@ function App() {
                 <SimpleGrid columns={4} spacing={10} mt="30px">
                   { 
                     tickets.map((id, index) => (
-                        <Box key={index} border="1px solid black" p="20px" width="20rem">
+                        <Box 
+                          key={index} 
+                          borderRadius="5px"
+                          border="1px solid"
+                          borderColor="gray.200"
+                          p="20px" 
+                          width="20rem"
+                        >
                           <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
                           <Text>Event: {id.eventName}</Text>
                           <Text>Number of Tickets: {id.numTickets}</Text>
-                          <form onSubmit={(e) => {
-                            e.preventDefault()
-                            setTicketToUsed(e, index)
-                          }}>
-                            <div className='form-group mr-sm-2'>
-                              <input
-                                id='eventStage'
-                                type='number'
-                                className="form-control form-control-md mb-2"
-                                placeholder='Set SRandomHash'
-                                onChange={(e) => setSRandomHash(e.target.value)}
-                              />
-                            </div>
-                            <button type='submit' className='btn btn-primary mb-4'>Set Ticket To Used</button>
+                          <form>
+                            <Input
+                              isRequired
+                              id='eventStage'
+                              type='number'
+                              size="md"
+                              placeholder='Set Random Number'
+                              onChange={(e) => setSRandomHash(e.target.value)}
+                              mb="10px"
+                              _placeholder={{ color: 'gray.500' }}
+                            />
+                            <Button 
+                              type='submit' 
+                              color={darkGreen}
+                              backgroundColor={lightGreen}
+                              size="lg"
+                              mt="10px"
+                              width="210px"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                setTicketToUsed(e, index)
+                              }}
+                            >
+                              Set Ticket To Used
+                            </Button>
                           </form>
-                          <button className='btn btn-primary mb-4' onClick={(e) => {
-                            e.preventDefault()
-                            withdraw(e, index)
-                          }}>
-                              Withdraw
-                          </button>
+                          <Button 
+                            type='submit' 
+                            color={darkGreen}
+                            backgroundColor={lightGreen}
+                            size="lg"
+                            mt="10px"
+                            width="210px"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              withdraw(e, index)
+                            }}
+                          >
+                            Withdraw Balance
+                          </Button>
                         </Box>
 
                     ))
@@ -463,32 +502,58 @@ function App() {
                 <SimpleGrid columns={4} spacing={10} mt="30px">
                   { 
                     myEvents.map((id, index) => (
-                      <Box key={index} border="1px solid black" p="20px" width="20rem">
+                      <Box 
+                        key={index} 
+                        borderRadius="5px"
+                        border="1px solid"
+                        borderColor="gray.200"
+                        p="20px" 
+                        width="20rem"
+                      >
                         <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
                         <Text>Event: {id.eventName}</Text>
                         <Text>Balance: {id.balance}</Text>
                         <Text>Number of Tickets Left: {id.numTicketsLeft}</Text>
-                        <form onSubmit={(e) => {
-                          e.preventDefault()
-                          updateEventStage(e, index)
-                        }}>
-                          <div className='form-group mr-sm-2'>
-                            <input
-                              id='eventStage'
-                              type='number'
-                              className="form-control form-control-md mb-2"
-                              placeholder='Set Event Stage (Prep, Active, Paused, CheckinOpen, Cancelled, Closed)'
-                              onChange={(e) => setEventStage(e.target.value)}
-                            />
-                          </div>
-                          <button type='submit' className='btn btn-primary mb-4'>Set Event Stage</button>
+                        <form>
+                          <Input
+                            isRequired
+                            id='eventStage'
+                            type='number'
+                            size="md"
+                            placeholder='Set Random Number'
+                            onChange={(e) => setEventStage(e.target.value)}
+                            mb="10px"
+                            _placeholder={{ color: 'gray.500' }}
+                          />
+                          <Button 
+                            type='submit' 
+                            color={darkGreen}
+                            backgroundColor={lightGreen}
+                            size="lg"
+                            mt="10px"
+                            width="210px"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              updateEventStage(e, index)
+                            }}
+                          >
+                            Set Event Stage
+                          </Button>
                         </form>
-                        <button className='btn btn-primary mb-4' onClick={(e) => {
-                            e.preventDefault()
-                            ownerWithdraw(e, index)
-                        }}>
+                        <Button 
+                            type='submit' 
+                            color={darkGreen}
+                            backgroundColor={lightGreen}
+                            size="lg"
+                            mt="10px"
+                            width="210px"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              ownerWithdraw(e, index)
+                            }}
+                          >
                             Owner Withdraw
-                        </button>
+                          </Button>
                       </Box>
                     ))
                   }
