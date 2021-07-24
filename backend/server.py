@@ -25,6 +25,9 @@ print("Connection Successfull");
 db = client.get_database('test')
 
 ########## EVENT ROUTES ##########
+@app.route('/')
+def hello():
+    return 'Hello, World!'
 
 @APP.route('/event/add', methods=['POST'])
 def event_add():
@@ -51,7 +54,7 @@ def event_get():
 ########## TICKET ROUTES ##########
 
 @APP.route('/ticket/add', methods=['POST'])
-def event_get():
+def add():
     '''
     Given a ticketID and userID
     Adds ticket to database
@@ -60,8 +63,14 @@ def event_get():
     # result = add_ticket(data, APP.secret_key)
     return
 
+@APP.route('/ticket/markAsUsed', methods=['POST'])
+def markasUsed():
+    data = request.get_json()
+    db.todos.insert_one({'title': "todo title", 'body': "todo body"})
+    return flask.jsonify(message="success")
+
 @APP.route('/tickets/<user_id>', methods=['GET'])
-def event_get():
+def ticket_get():
     '''
     Given a ticketID and userID
     Adds ticket to database

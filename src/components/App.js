@@ -131,24 +131,16 @@ function App() {
           var oEventContract = new web3Subscription.eth.Contract(Event.abi, eventAddresses[i])
           oEventContract.events.TicketUsed().on("connected", function () {
             console.log("listening on event temperatureRequest");
-        }).on("data", (event) => {console.log("event fired: " + JSON.stringify(event.returnValues)); debugger;});
-          //console.log(thisEventContract.events);
-          // Register Oracle Listener
-          /*thisEventContract.events["TicketUsed(string,string)"]()
-                .on("connected", function (subscriptionId: any) {
-                    console.log("listening on event TicketUsed");
-                })
-                .on("data", async function (event: any) {
-                    console.log("Event fired data:");
-                    console.log(event.returnValues);
-                    /// TODO respond with temperature by calling responsePhase(int256)
-                })
-                .on("error", function (error: any, receipt: any) {
-                    console.log(error);
-                    console.log(receipt);
-                    console.log("error listening on event TicketUsed");
-                });*/
-          
+            })
+            .on("data", (event) => {
+                console.log("event fired: " + JSON.stringify(event.returnValues)); 
+            })
+            .on("error", function (error: any, receipt: any) {
+                console.log(error);
+                console.log(receipt);
+                console.log("error listening on event TicketUsed");
+            });
+
           // Extract event data from event contract
           const thisEventData = {}
           
