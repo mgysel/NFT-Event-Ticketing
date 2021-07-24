@@ -285,11 +285,11 @@ contract Event is ERC721 {
         uint priceToPay = ticketPrice - royalty;
 
         //transfer money to seller
-        address payable seller =  payable(ownerOf(ticketID));
+        address payable seller = payable(ownerOf(ticketID));
         seller.transfer(priceToPay);
-        // bool sent = seller.send(price);
+        bool sent = seller.send(price);
 
-        // require(sent, "Failed to send ether to user");
+        require(sent, "Failed to send ether to user");
 
         emit TicketSold(seller, msg.sender, ticketID);
         safeTransferFrom(seller, msg.sender, ticketID);
