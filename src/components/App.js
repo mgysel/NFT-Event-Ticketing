@@ -3,15 +3,23 @@ import { ColorModeProvider } from "@chakra-ui/color-mode";
 import {
   Heading,
   Flex,
+  Center,
   Wrap,
   WrapItem,
   Button,
   Text,
+  Form,
+  FormControl,
+  FormLabel,
+  FormErrorMessage,
+  FormHelperText,
   IconButton,
   Icon,
+  Input,
   SimpleGrid,
   Box,
   VStack,
+  Stack,
   Tabs,
   TabList,
   TabPanels,
@@ -48,6 +56,9 @@ function App() {
   const [sRandomHash, setSRandomHash] = useState("");
   const [eventStage, setEventStage] = useState(0);
 
+  // Styling
+  const lightGreen = "#C6F6DF";
+  const darkGreen = "#276749";
   
   // On page load, load eventCreator contract
   useEffect(() => {
@@ -273,7 +284,6 @@ function App() {
         </nav>
         <Tabs 
           mt="100px"
-          mb="40px"
           p="20px"
           variant="soft-rounded"
           colorScheme="green"
@@ -281,7 +291,7 @@ function App() {
           border="1px solid"
           borderColor="gray.200"
         >
-          <TabList mb="40px">
+          <TabList>
             <Tab>
               Create Events
             </Tab>
@@ -299,73 +309,92 @@ function App() {
             </Tab>
           </TabList>
           <TabPanels bg="white">
-            <TabPanel>
-              <div className="container-fluid mt-5">
-                <div className="row">
-                  <main role="main" className="col-lg-12 d-flex text-center">
-                    <div className="content mr-auto ml-auto">
-                      <h1>Create an Event Now</h1>
-                        <form onSubmit={(e) => {
-                            e.preventDefault()
-                            createEvent(e)
-                        }}>
-                        <div className='form-group mr-sm-2'>
-                        <br></br>
-                          <input
-                            required
-                            id='name'
-                            type='text'
-                            className="form-control form-control-md mb-2"
-                            placeholder='Event name'
-                            onChange={(e) => setFormEventName(e.target.value)}
-                          />
-                          <input
-                            required
-                            id='symbol'
-                            type='text'
-                            className="form-control form-control-md mb-2"
-                            placeholder='Token symbol'
-                            onChange={(e) => setFormEventSymbol(e.target.value)}
-                          />
-                          <input
-                            required
-                            id='numTickets'
-                            type='number'
-                            className="form-control form-control-md mb-2"
-                            placeholder='Number of Tickets'
-                            onChange={(e) => setFormNumTickets(e.target.value)}
-                          />
-                          <input
-                            required
-                            id='price'
-                            type='number'
-                            className="form-control form-control-md mb-2"
-                            placeholder='Price'
-                            onChange={(e) => setFormPrice(e.target.value)}
-                          />
-                          <input
-                            required
-                            id='canBeResold'
-                            type='text'
-                            className="form-control form-control-md mb-2"
-                            placeholder='Can the Tickets be resold?'
-                            onChange={(e) => setFormCanBeResold(e.target.value)}
-                          />
-                          <input
-                            required
-                            id='royaltyPercent'
-                            type='number'
-                            className="form-control form-control-md mb-2"
-                            placeholder='Resale royalty (%)'
-                            onChange={(e) => setFormRoyaltyPercent(e.target.value)}
-                          />
-                        </div>
-                        <button type='submit' className='btn btn-primary mb-4'>CREATE EVENT</button>
-                      </form>
-                    </div>
-                  </main>
-                </div>
-              </div>
+            <TabPanel mt="15px" align="center">
+              <Stack width="600px" align="center" justify="center">
+                <Heading mb="25px">Create an Event Now</Heading>
+                  <form 
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      createEvent(e)
+                    }}
+                  >
+                    <Input
+                      isRequired
+                      id='name'
+                      type='text'
+                      size="md"
+                      placeholder='Event name'
+                      onChange={(e) => setFormEventName(e.target.value)}
+                      mb="10px"
+                      _placeholder={{ color: 'gray.500' }}
+                      w="450px"
+                    />
+                    <Input
+                      isRequired
+                      id='symbol'
+                      type='text'
+                      size="md"
+                      placeholder='Token symbol'
+                      onChange={(e) => setFormEventSymbol(e.target.value)}
+                      mb="10px"
+                      _placeholder={{ color: 'gray.500' }}
+                      w="450px"
+                    />
+                    <Input
+                      isRequired
+                      id='numTickets'
+                      type='number'
+                      size="md"
+                      placeholder='Number of Tickets'
+                      onChange={(e) => setFormNumTickets(e.target.value)}
+                      mb="10px"
+                      _placeholder={{ color: 'gray.500' }}
+                      w="450px"
+                    />
+                    <Input
+                      isRequired
+                      id='price'
+                      type='number'
+                      size="md"
+                      placeholder='Price'
+                      onChange={(e) => setFormPrice(e.target.value)}
+                      mb="10px"
+                      _placeholder={{ color: 'gray.500' }}
+                      w="450px"
+                    />
+                    <Input
+                      isRequired
+                      id='canBeResold'
+                      type='text'
+                      size="md"
+                      placeholder='Can the Tickets be resold?'
+                      onChange={(e) => setFormCanBeResold(e.target.value)}
+                      mb="10px"
+                      _placeholder={{ color: 'gray.500' }}
+                      w="450px"
+                    />
+                    <Input
+                      isRequired
+                      id='royaltyPercent'
+                      type='number'
+                      size="md"
+                      placeholder='Resale royalty (%)'
+                      onChange={(e) => setFormRoyaltyPercent(e.target.value)}
+                      mb="10px"
+                      _placeholder={{ color: 'gray.500' }}
+                      w="450px"
+                    />
+                  <Button 
+                    type='submit' 
+                    color={darkGreen}
+                    backgroundColor={lightGreen}
+                    size="lg"
+                    mt="10px"
+                  >
+                      CREATE EVENT
+                  </Button>
+                </form>
+              </Stack>
             </TabPanel>
             <TabPanel>
               <div div className="content mr-auto ml-auto">
