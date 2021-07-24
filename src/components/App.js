@@ -312,78 +312,78 @@ function App() {
             <TabPanel mt="15px" mb="15px" align="center">
               <Stack width="600px" align="center" justify="center">
                 <Heading mb="25px">Create an Event Now</Heading>
-                  <form 
-                    onSubmit={(e) => {
-                      e.preventDefault()
-                      createEvent(e)
-                    }}
-                  >
-                    <Input
-                      isRequired
-                      id='name'
-                      type='text'
-                      size="md"
-                      placeholder='Event name'
-                      onChange={(e) => setFormEventName(e.target.value)}
-                      mb="10px"
-                      _placeholder={{ color: 'gray.500' }}
-                      w="450px"
-                    />
-                    <Input
-                      isRequired
-                      id='symbol'
-                      type='text'
-                      size="md"
-                      placeholder='Token symbol'
-                      onChange={(e) => setFormEventSymbol(e.target.value)}
-                      mb="10px"
-                      _placeholder={{ color: 'gray.500' }}
-                      w="450px"
-                    />
-                    <Input
-                      isRequired
-                      id='numTickets'
-                      type='number'
-                      size="md"
-                      placeholder='Number of Tickets'
-                      onChange={(e) => setFormNumTickets(e.target.value)}
-                      mb="10px"
-                      _placeholder={{ color: 'gray.500' }}
-                      w="450px"
-                    />
-                    <Input
-                      isRequired
-                      id='price'
-                      type='number'
-                      size="md"
-                      placeholder='Price'
-                      onChange={(e) => setFormPrice(e.target.value)}
-                      mb="10px"
-                      _placeholder={{ color: 'gray.500' }}
-                      w="450px"
-                    />
-                    <Input
-                      isRequired
-                      id='canBeResold'
-                      type='text'
-                      size="md"
-                      placeholder='Can the Tickets be resold?'
-                      onChange={(e) => setFormCanBeResold(e.target.value)}
-                      mb="10px"
-                      _placeholder={{ color: 'gray.500' }}
-                      w="450px"
-                    />
-                    <Input
-                      isRequired
-                      id='royaltyPercent'
-                      type='number'
-                      size="md"
-                      placeholder='Resale royalty (%)'
-                      onChange={(e) => setFormRoyaltyPercent(e.target.value)}
-                      mb="10px"
-                      _placeholder={{ color: 'gray.500' }}
-                      w="450px"
-                    />
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    createEvent(e)
+                  }}
+                >
+                  <Input
+                    isRequired
+                    id='name'
+                    type='text'
+                    size="md"
+                    placeholder='Event name'
+                    onChange={(e) => setFormEventName(e.target.value)}
+                    mb="10px"
+                    _placeholder={{ color: 'gray.500' }}
+                    w="450px"
+                  />
+                  <Input
+                    isRequired
+                    id='symbol'
+                    type='text'
+                    size="md"
+                    placeholder='Token symbol'
+                    onChange={(e) => setFormEventSymbol(e.target.value)}
+                    mb="10px"
+                    _placeholder={{ color: 'gray.500' }}
+                    w="450px"
+                  />
+                  <Input
+                    isRequired
+                    id='numTickets'
+                    type='number'
+                    size="md"
+                    placeholder='Number of Tickets'
+                    onChange={(e) => setFormNumTickets(e.target.value)}
+                    mb="10px"
+                    _placeholder={{ color: 'gray.500' }}
+                    w="450px"
+                  />
+                  <Input
+                    isRequired
+                    id='price'
+                    type='number'
+                    size="md"
+                    placeholder='Price'
+                    onChange={(e) => setFormPrice(e.target.value)}
+                    mb="10px"
+                    _placeholder={{ color: 'gray.500' }}
+                    w="450px"
+                  />
+                  <Input
+                    isRequired
+                    id='canBeResold'
+                    type='text'
+                    size="md"
+                    placeholder='Can the Tickets be resold?'
+                    onChange={(e) => setFormCanBeResold(e.target.value)}
+                    mb="10px"
+                    _placeholder={{ color: 'gray.500' }}
+                    w="450px"
+                  />
+                  <Input
+                    isRequired
+                    id='royaltyPercent'
+                    type='number'
+                    size="md"
+                    placeholder='Resale royalty (%)'
+                    onChange={(e) => setFormRoyaltyPercent(e.target.value)}
+                    mb="10px"
+                    _placeholder={{ color: 'gray.500' }}
+                    w="450px"
+                  />
                   <Button 
                     type='submit' 
                     color={darkGreen}
@@ -396,36 +396,34 @@ function App() {
                 </form>
               </Stack>
             </TabPanel>
-            <TabPanel>
-              <div div className="content mr-auto ml-auto">
-                <h1 className="text-center" pb="30px">Purchase Tickets</h1>
-                <SimpleGrid columns={4} spacing={10} mt="30px">
-                  { 
-                    eventData.map((id, index) => (
-                        <Box key={index} border="1px solid black" p="20px" width="20rem">
-                          <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
-                          <Text>Name: {id.eventName}</Text>
-                          <Text>Symbol: {id.eventSymbol}</Text>
-                          <Text>Number of Tickets: {id.numTicketsLeft}</Text>
-                          <Text>Price: {id.price}</Text>
-                          <Text>Can Be Resold?: {id.canBeResold}</Text>
-                          <Text>Royalty Percent: {id.royaltyPercent}</Text>
-                          <Text>Stage: {id.stage}</Text>
-                          <button className='btn btn-primary mb-4' onClick={(e) => {
-                            e.preventDefault()
-                            buyTicket(e, index)
-                          }}>
-                            Buy Ticket
-                          </button>
-                        </Box>
-                    ))
-                  }
-                </SimpleGrid>
-              </div>
+            <TabPanel mt="15px" mb="15px" align="center">
+              <Heading mb="25px">Purchase Tickets</Heading>
+              <h1 className="text-center" pb="30px">Purchase Tickets</h1>
+              <SimpleGrid columns={4} spacing={10} mt="30px">
+                { 
+                  eventData.map((id, index) => (
+                      <Box key={index} border="1px solid black" p="20px" width="20rem">
+                        <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
+                        <Text>Name: {id.eventName}</Text>
+                        <Text>Symbol: {id.eventSymbol}</Text>
+                        <Text>Number of Tickets: {id.numTicketsLeft}</Text>
+                        <Text>Price: {id.price}</Text>
+                        <Text>Can Be Resold?: {id.canBeResold}</Text>
+                        <Text>Royalty Percent: {id.royaltyPercent}</Text>
+                        <Text>Stage: {id.stage}</Text>
+                        <button className='btn btn-primary mb-4' onClick={(e) => {
+                          e.preventDefault()
+                          buyTicket(e, index)
+                        }}>
+                          Buy Ticket
+                        </button>
+                      </Box>
+                  ))
+                }
+              </SimpleGrid>
             </TabPanel>
-            <TabPanel>
-              <div div className="content mr-auto ml-auto">
-                <h1 className="text-center" pb="30px">My Tickets</h1>
+            <TabPanel mt="15px" mb="15px" align="center">
+                <Heading mb="25px">My Tickets</Heading>
                 <SimpleGrid columns={4} spacing={10} mt="30px">
                   { 
                     tickets.map((id, index) => (
@@ -459,11 +457,9 @@ function App() {
                     ))
                   }
                 </SimpleGrid>
-              </div>
             </TabPanel>
-            <TabPanel>
-              <div div className="content mr-auto ml-auto">
-                <h1 className="text-center" pb="30px">My Events</h1>
+            <TabPanel mt="15px" mb="15px" align="center">
+                <Heading mb="25px">My Events</Heading>
                 <SimpleGrid columns={4} spacing={10} mt="30px">
                   { 
                     myEvents.map((id, index) => (
@@ -497,10 +493,9 @@ function App() {
                     ))
                   }
                 </SimpleGrid>
-              </div>
             </TabPanel>
-            <TabPanel>
-              <h1 className="text-center" pb="30px">Entry Gate</h1>
+            <TabPanel mt="15px" mb="15px" align="center">
+              <Heading mb="25px">My Events</Heading>
             </TabPanel>
           </TabPanels>
         </Tabs>
