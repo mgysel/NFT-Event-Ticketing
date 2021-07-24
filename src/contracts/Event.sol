@@ -58,28 +58,19 @@ contract EventCreator {
 /// @title Contract to mint tickets of an event
 contract Event is ERC721 {
     /// Control Event Status at a granular level
-    /// Prep - Allows administrator to maintain event
-    /// Active - Buying tickets allowed
-    /// Paused - Buying tickets not allowed
-    /// CheckinOpen - Buyer can checkin to attend the event
-    /// Cancelled - Event is cancelled. Money can be refunded to buyers
-    /// Closed - Event is closed
     enum Stages { Prep, Active, Paused, CheckinOpen, Cancelled, Closed }
     Stages public stage = Stages.Prep;
     
     /// Control Ticket Status at a granular level
-    /// Invalid - Ticket is not valid
-    /// Valid - Ticket is Valid
-    /// Used - Ticket is used
-    /// AvailableForSale - Ticket is allowed to be sold to someone
     enum TicketStatus { Invalid, Valid, Used, AvailableForSale }
     
     // Ticket struct 
     struct Ticket {
-        uint32 ticketID;
+        uint32 price;
         uint32 resalePrice;
         TicketStatus status;
     }
+    Ticket[] public tickets;
     uint32 public numTicketsLeft;
     uint32 public price;
     
@@ -87,7 +78,7 @@ contract Event is ERC721 {
     uint8 public royaltyPercent;
     
     // For each user, store corresponding ticket struct
-    mapping(address => Ticket) public tickets;
+    //mapping(address => Ticket) public tickets;
     
     bool public canBeResold;
     address payable public owner;
@@ -102,12 +93,13 @@ contract Event is ERC721 {
     event CreateTicket(address buyer, uint ticketID);
     event WithdrawMoney(address receiver, uint money);
     event OwnerWithdrawMoney(address owner, uint money);
+    event TicketForSale(address seller, uint ticketID);
+    event TicketSold(address seller, address buyer, uint ticketID);
     event TicketUsed(string eventName, string sQRCodeKey);
 
     // Creates a new Event Contract
     constructor(address _owner, uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
-            string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
-        
+            string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {    
         // Check valid constructor arguments
         require(_royaltyPercent >= 0 && _royaltyPercent <= 100, "Royalty Percentage must be between 0 and 100");
         // Number of tickets must be greater than 0
@@ -131,29 +123,23 @@ contract Event is ERC721 {
      */
     function buyTicket() public payable buyingTicketOpen ticketsLeft 
                                             hasEnoughMoney(msg.value) returns (uint){
-        uint32 ticketID = numTicketsLeft;
+        //uint32 ticketID = numTicketsLeft;
 
         // Create Ticket t
         Ticket memory t;
-        t.ticketID = ticketID;
+        t.price = price;
         t.resalePrice = price;
         t.status = TicketStatus.Valid;
 
-        // Store t in tickets array, reduce numTicketsLeft
-        tickets[msg.sender] = t;
+
+        // Store t in tickets array
+        tickets.push(t);
+        uint ticketID = tickets.length - 1;
         numTicketsLeft--;
-        
-        // new added
-        balances[owner] += price;
 
         // Mint NFT
         _safeMint(msg.sender, ticketID);
         emit CreateTicket(msg.sender, ticketID);
-
-        // Store t in tickets mapping, reduce numTicketsLeft
-        tickets[msg.sender] = t;
-        numTicketsBought[msg.sender] = numTicketsBought[msg.sender] + 1;
-        numTicketsLeft--;
 
         // If user overpaid, add difference to balances
         if (msg.value > price) {
@@ -179,21 +165,49 @@ contract Event is ERC721 {
      * @dev Only a valid buyer can mark ticket as used
      * @param sQRCodeKey QR Code key sent by the app 
      */
-    function setTicketToUsed(string memory sQRCodeKey) public requiredStage(Stages.CheckinOpen)
-                                                                    returns (string memory){
-		Ticket memory ticket = tickets[msg.sender];
-	
-	    // Burn the Token
-        _burn(ticket.ticketID);
+    function setTicketToUsed(uint ticketID, string memory sQRCodeKey) public requiredStage(Stages.CheckinOpen)
+                                                                    ownsTicket(ticketID) returns (string memory){
+		// Validate that user has a ticket they own and it is valid
+        require(tickets[ticketID].status == TicketStatus.Valid, "There is no valid ticket for this user");
+    
         
         // Ticket is valid so mark it as used
-        tickets[msg.sender].status = TicketStatus.Used;
+        tickets[ticketID].status = TicketStatus.Used;
 
+        // Burn the Token
+        _burn(ticketID); 
+        
         // Raise event which Gate Management system can consume then
         emit TicketUsed(name(), sQRCodeKey);
         
         return sQRCodeKey;
 	}
+
+    /**
+     * @notice Mark ticket as used
+     * @dev Only a valid buyer can mark ticket as used
+     * @param ticketID ticket ID of ticket
+     */
+    function setTicketForSale(uint ticketID) public requiredStage(Stages.Active) ownsTicket(ticketID) {
+		// Validate that user has a ticket they own and it is valid
+        require(tickets[ticketID].status != TicketStatus.Used, "Ticket has already been used");
+        
+        // Ticket is valid so mark it as used
+        tickets[ticketID].status = TicketStatus.AvailableForSale;
+        
+        // Raise event which Gate Management system can consume then
+        emit TicketForSale(msg.sender, ticketID);
+        
+        //return ticketID;
+	}
+
+     /**
+     * @dev get ticket status
+     */
+    function getTicketStatus(uint ticketID) public view returns (TicketStatus) {
+        return tickets[ticketID].status;
+    }
+
 	
     /**
      * @notice Allows owner to withdraw money
@@ -225,19 +239,17 @@ contract Event is ERC721 {
      * @dev User can withdraw money if event cancelled or overpaid for ticket
      */
     function withdraw() public returns (bool success) {
-        // Amount user overpaid for ticket
+        // Amount to send to user
         uint sendToUser = balances[msg.sender];
 
         // Update balance before sending money
         balances[msg.sender] = 0;
-        totalBalances -= balances[msg.sender];
         
         // If event cancelled, send user the amount they overpaid for ticket + ticket price refund
         if ((stage == Stages.Cancelled || stage == Stages.Paused) && isUserRefunded[msg.sender] == false) {
             // Update isUserRefunded before sending money
             isUserRefunded[msg.sender] = true;
-            sendToUser += (price * numTicketsBought[msg.sender]);
-            numTicketsBought[msg.sender] = 0;
+            sendToUser += price;
         }
 
         // Cannot withdraw if no money to withdraw
@@ -253,6 +265,41 @@ contract Event is ERC721 {
         
         return true;
     }
+
+    // /**
+    //  * @dev approve a buyer to buy ticket of another user
+    //  */
+    // function approveAsBuyer(address buyer, uint ticketID) public requiredStage(Stages.Active) ownsTicket(ticketID) {
+    //     approve(buyer, ticketID);
+    // }
+
+    // /**
+    //  * @notice Mark ticket as used
+    //  * @dev Only a valid buyer can mark ticket as used
+    //  * @param ticketID ticket ID of ticket
+    //  */
+    // function buyTicketFromUser(uint ticketID) public payable requiredStage(Stages.Active) hasEnoughMoney(msg.value) returns (bool) {
+    //     // Check if ticket is available for sale
+    //     require(tickets[ticketID].status == TicketStatus.AvailableForSale, "Ticket not available for sale");
+
+    //     //calc amount to pay after royalty
+    //     uint ticketPrice = tickets[ticketID].price;
+    //     uint royalty = (royaltyPercent/100) * ticketPrice;
+    //     uint priceToPay = ticketPrice - royalty;
+
+    //     //transfer money to seller
+    //     address payable seller = payable(ownerOf(ticketID));
+    //     seller.transfer(priceToPay);
+    //     bool sent = seller.send(price);
+
+    //     require(sent, "Failed to send ether to user");
+
+    //     emit TicketSold(seller, msg.sender, ticketID);
+    //     safeTransferFrom(seller, msg.sender, ticketID);
+
+    //     return true;
+
+    // }
 
 
     // MODIFIERS
@@ -286,21 +333,11 @@ contract Event is ERC721 {
         _;
     }
 
-    function toAsciiString(address x) internal view returns (string memory) {
-        bytes memory s = new bytes(40);
-        for (uint i = 0; i < 20; i++) {
-            bytes1 b = bytes1(uint8(uint(uint160(x)) / (2**(8*(19 - i)))));
-            bytes1 hi = bytes1(uint8(b) / 16);
-            bytes1 lo = bytes1(uint8(b) - 16 * uint8(hi));
-            s[2*i] = char(hi);
-            s[2*i+1] = char(lo);            
-        }
-        return string(s);
+    // Check if user is ticket owner
+    modifier ownsTicket(uint ticketID) {
+        require(ownerOf(ticketID) == msg.sender, "User does not own this ticket");
+        _;
     }
-
-    function char(bytes1 b) internal view returns (bytes1 c) {
-        if (uint8(b) < 10) return bytes1(uint8(b) + 0x30);
-        else return bytes1(uint8(b) + 0x57);
-    }
+    
 }
 

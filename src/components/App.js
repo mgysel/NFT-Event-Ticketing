@@ -181,6 +181,7 @@ function App() {
         // Get user tickets for each event
         console.log("TICKET BALANCES")
         var allTickets = []
+        console.log("Event contracts length" + eventContracts.length)
         for (var i = 0; i < eventContracts.length; i++) {
           let bal = await eventContracts[i].methods.balanceOf(account).call()
           console.log("Event Balance")
@@ -188,11 +189,13 @@ function App() {
           console.log(bal['_hex']);
           let numTickets = parseInt(bal['_hex'])
           if (numTickets > 0) {
-            allTickets.push({
-              'eventNumber': i, 
-              'eventName': eventData[i]['eventName'],
-              'numTickets': numTickets
-            })
+            for(var j = 0; j < numTickets; j++){
+              allTickets.push({
+                'eventNumber': i, 
+                'eventName': eventData[i]['eventName'],
+                'ticketID': j
+              })
+            }
           }
         }
         setTickets(allTickets)
@@ -270,6 +273,15 @@ function App() {
     }
   }
 
+  // Allows user to mark ticket for sale
+  async function setTicketForSale(e, ticketID, eventNumber) {
+    try {
+      await eventContracts[eventNumber].methods.setTicketForSale(ticketID).send({ from: account })
+    } catch(e) {
+      console.log('Set ticket for sale: ', e)
+    }
+  }
+
   // Allows owner to withdraw from smart contract
   async function ownerWithdraw(e, eventNumber) {
     try {
@@ -329,6 +341,9 @@ function App() {
             </Tab>
             <Tab>
               My Events
+            </Tab>
+            <Tab>
+              Secondary Tickets
             </Tab>
             <Tab>
               Entry Gate
@@ -473,9 +488,9 @@ function App() {
                           p="20px" 
                           width="20rem"
                         >
-                          <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px"> Event {index + 1}</Text>
+                          <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px"> Event {id.eventNumber + 1}</Text>
                           <Text>Event: {id.eventName}</Text>
-                          <Text>Number of Tickets: {id.numTickets}</Text>
+                          <Text>ID: {id.ticketID}</Text>
                           <form>
                             <Input
                               isRequired
@@ -503,6 +518,20 @@ function App() {
                               Set Ticket To Used
                             </Button>
                           </form>
+                          <Button 
+                            type='submit' 
+                            color={darkGreen}
+                            backgroundColor={lightGreen}
+                            size="lg"
+                            mt="10px"
+                            width="210px"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              setTicketForSale(e, id.ticketID, index)
+                            }}
+                          >
+                            Set Ticket For Sale
+                          </Button>
                           <Button 
                             type='submit' 
                             color={darkGreen}
