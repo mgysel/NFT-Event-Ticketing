@@ -76,7 +76,7 @@ contract Event is ERC721 {
     
     // Ticket struct 
     struct Ticket {
-        uint32 price;
+        uint32 ticketID;
         uint32 resalePrice;
         TicketStatus status;
     }
@@ -94,6 +94,7 @@ contract Event is ERC721 {
     address payable public owner;
     
     // to store the balances for buyers and organizers
+    uint totalBalances = 0;
     mapping(address => uint) public balances;
     mapping(address => bool) public isUserRefunded;
 
@@ -101,14 +102,12 @@ contract Event is ERC721 {
     event CreateTicket(address buyer, uint ticketID);
     event WithdrawMoney(address receiver, uint money);
     event OwnerWithdrawMoney(address owner, uint money);
-    event TicketUsed(string sQRCodeKey);
     event TicketForSale(address seller, uint ticketID);
     event TicketSold(address seller, address buyer, uint ticketID);
 
     // Creates a new Event Contract
     constructor(address _owner, uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
-            string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
-        
+            string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {    
         // Check valid constructor arguments
         require(_royaltyPercent >= 0 && _royaltyPercent <= 100, "Royalty Percentage must be between 0 and 100");
         // Number of tickets must be greater than 0
@@ -132,9 +131,11 @@ contract Event is ERC721 {
      */
     function buyTicket() public payable buyingTicketOpen ticketsLeft 
                                             hasEnoughMoney(msg.value) returns (uint){
+        uint32 ticketID = numTicketsLeft;
+
         // Create Ticket t
         Ticket memory t;
-        t.price = price;
+        t.ticketID = ticketID;
         t.resalePrice = price;
         t.status = TicketStatus.Valid;
 
@@ -145,12 +146,13 @@ contract Event is ERC721 {
         numTicketsLeft--;
 
         // Mint NFT
-        _mint(msg.sender, ticketID);
+        _safeMint(msg.sender, ticketID);
         emit CreateTicket(msg.sender, ticketID);
 
         // If user overpaid, add difference to balances
         if (msg.value > price) {
             balances[msg.sender] = msg.value - price;
+            totalBalances += (msg.value - price);
         }
         
         return ticketID;
@@ -175,12 +177,16 @@ contract Event is ERC721 {
                                                                     ownsTicket(ticketID) returns (string memory){
 		// Validate that user has a ticket they own and it is valid
         require(tickets[ticketID].status == TicketStatus.Valid, "There is no valid ticket for this user");
+    
+	
+	    // Burn the Token
+        _burn(ticketID);
         
         // Ticket is valid so mark it as used
         tickets[ticketID].status = TicketStatus.Used;
         
         // Raise event which Gate Management system can consume then
-        emit TicketUsed(sQRCodeKey);
+        emit TicketUsed(name(), sQRCodeKey);
         
         return sQRCodeKey;
 	}
@@ -211,21 +217,26 @@ contract Event is ERC721 {
     }
 
 	
-    // TODO - WHY DO WE NEED REFUND? 
     /**
-     * @notice Refund money to buyers
-     * @dev once the event is cancelled, organizer should refund money to buyers
+     * @notice Allows owner to withdraw money
+     * @dev once the event is closed, owner can withdraw money from SC account
      */
     function ownerWithdraw() public onlyOwner requiredStage(Stages.Closed) returns (bool success){
-        uint contractBalance = address(this).balance;
-        require(contractBalance > 0, "No money in smart contract account");
+        // Make sure owner did not already withdraw
+        require(isUserRefunded[owner] == false, "Owner has already withdrawn money");
+        isUserRefunded[owner] = true;
         
+        // Require smart contract balance - amount users overpaid > 0
+        // Otherwise, there is no money for owner to refund
+        uint sendToOwner = address(this).balance - totalBalances;
+        require(sendToOwner > 0, "No money in smart contract account");
+
         // Transfer money to owner
-        bool sent = owner.send(contractBalance);
+        bool sent = owner.send(sendToOwner);
         // Failure condition if cannot transfer
         require(sent, "Failed to send ether to owner");
 
-        emit OwnerWithdrawMoney(msg.sender, contractBalance);
+        emit OwnerWithdrawMoney(msg.sender, sendToOwner);
 
         return true;
     }
@@ -315,7 +326,7 @@ contract Event is ERC721 {
     
     // Check if buying is open
     modifier buyingTicketOpen() {
-        require(stage == Stages.Active || stage == Stages.CheckinOpen, "Cannot buy ticket at this stage");
+        require(stage == Stages.Active || stage == Stages.CheckinOpen, "Tickets are not open for sale");
         _;
     }
 
@@ -325,7 +336,6 @@ contract Event is ERC721 {
         _;
     }
 
-    // Requires user to have enough money to purchase ticket
     modifier hasEnoughMoney(uint money) {
         require(money >= price, "Not enough money to purchase a ticket");
         _;
@@ -337,5 +347,21 @@ contract Event is ERC721 {
         _;
     }
     
+    function toAsciiString(address x) internal view returns (string memory) {
+        bytes memory s = new bytes(40);
+        for (uint i = 0; i < 20; i++) {
+            bytes1 b = bytes1(uint8(uint(uint160(x)) / (2**(8*(19 - i)))));
+            bytes1 hi = bytes1(uint8(b) / 16);
+            bytes1 lo = bytes1(uint8(b) - 16 * uint8(hi));
+            s[2*i] = char(hi);
+            s[2*i+1] = char(lo);            
+        }
+        return string(s);
+    }
+
+    function char(bytes1 b) internal view returns (bytes1 c) {
+        if (uint8(b) < 10) return bytes1(uint8(b) + 0x30);
+        else return bytes1(uint8(b) + 0x57);
+    }
 }
 
