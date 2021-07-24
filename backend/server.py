@@ -1,5 +1,4 @@
 from flask import Flask, request, redirect, url_for
-from flask_mail import Mail, Message
 from flask_cors import CORS
 from bson.objectid import ObjectId
 # imports for PyJWT authentication
@@ -25,7 +24,7 @@ print("Connection Successfull");
 db = client.get_database('test')
 
 ########## EVENT ROUTES ##########
-@app.route('/')
+@APP.route('/')
 def hello():
     return 'Hello, World!'
 
