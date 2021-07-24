@@ -230,38 +230,38 @@ contract Event is ERC721 {
         return true;
     }
 
-    // TODO: DOES THIS NEED TO RETURN BOOLEAN? IF IT FAILS THERE WILL BE AN ERROR
-    /**
-     * @notice User to withdraw money 
-     * @dev User can withdraw money if event cancelled or overpaid for ticket
-     */
-    function withdraw() public returns (bool success) {
-        // Amount to send to user
-        uint sendToUser = balances[msg.sender];
+    // // TODO: DOES THIS NEED TO RETURN BOOLEAN? IF IT FAILS THERE WILL BE AN ERROR
+    // /**
+    //  * @notice User to withdraw money 
+    //  * @dev User can withdraw money if event cancelled or overpaid for ticket
+    //  */
+    // function withdraw() public returns (bool success) {
+    //     // Amount to send to user
+    //     uint sendToUser = balances[msg.sender];
 
-        // Update balance before sending money
-        balances[msg.sender] = 0;
+    //     // Update balance before sending money
+    //     balances[msg.sender] = 0;
         
-        // If event cancelled, send user the amount they overpaid for ticket + ticket price refund
-        if ((stage == Stages.Cancelled || stage == Stages.Paused) && isUserRefunded[msg.sender] == false) {
-            // Update isUserRefunded before sending money
-            isUserRefunded[msg.sender] = true;
-            sendToUser += price;
-        }
+    //     // If event cancelled, send user the amount they overpaid for ticket + ticket price refund
+    //     if ((stage == Stages.Cancelled || stage == Stages.Paused) && isUserRefunded[msg.sender] == false) {
+    //         // Update isUserRefunded before sending money
+    //         isUserRefunded[msg.sender] = true;
+    //         sendToUser += price;
+    //     }
 
-        // Cannot withdraw if no money to withdraw
-        require(sendToUser > 0, "User does not have money to withdraw");
+    //     // Cannot withdraw if no money to withdraw
+    //     require(sendToUser > 0, "User does not have money to withdraw");
 
-        // Transfer money to user
-        address payable receiver = payable(msg.sender);
-        bool sent = receiver.send(sendToUser);
-        // Failure condition of send will emit this error
-        require(sent, "Failed to send ether to user");
+    //     // Transfer money to user
+    //     address payable receiver = payable(msg.sender);
+    //     bool sent = receiver.send(sendToUser);
+    //     // Failure condition of send will emit this error
+    //     require(sent, "Failed to send ether to user");
 
-        emit WithdrawMoney(msg.sender, sendToUser);
+    //     emit WithdrawMoney(msg.sender, sendToUser);
         
-        return true;
-    }
+    //     return true;
+    // }
 
     /**
      * @dev approve a buyer to buy ticket of another user
@@ -286,9 +286,10 @@ contract Event is ERC721 {
 
         //transfer money to seller
         address payable seller =  payable(ownerOf(ticketID));
-        bool sent = seller.send(priceToPay);
+        seller.transfer(priceToPay);
+        // bool sent = seller.send(price);
 
-        require(sent, "Failed to send ether to user");
+        // require(sent, "Failed to send ether to user");
 
         emit TicketSold(seller, msg.sender, ticketID);
         safeTransferFrom(seller, msg.sender, ticketID);
