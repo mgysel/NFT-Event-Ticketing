@@ -123,6 +123,7 @@ contract('Event', (accounts) => {
             await Event.new(owner, _numTickets, _price, _canBeResold, _royaltyPercent, _eventName, invalidEventSymbol).should.be.rejectedWith(EVM_REVERT)
         })
 
+        
 
     })
 
