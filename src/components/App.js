@@ -309,7 +309,7 @@ function App() {
             </Tab>
           </TabList>
           <TabPanels bg="white">
-            <TabPanel mt="15px" align="center">
+            <TabPanel mt="15px" mb="15px" align="center">
               <Stack width="600px" align="center" justify="center">
                 <Heading mb="25px">Create an Event Now</Heading>
                   <form 
