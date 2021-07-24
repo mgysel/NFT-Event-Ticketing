@@ -157,7 +157,7 @@ contract('Event', (accounts) => {
                 const address_actual = ev['buyer'].toString()
 
                 // Check ticketID
-                const ticketID_expected = '5'
+                const ticketID_expected = '0'
                 const ticketID_actual = ev['ticketID'].toString()
                 return ticketID_actual === ticketID_expected && address_actual === address_expected
             })
@@ -224,400 +224,539 @@ contract('Event', (accounts) => {
         it('checking cannot set Ticket To Used unless Checkin stage', async () => {
             // Prep (0) Stage
             await event.setStage(0)
-            await event.setTicketToUsed(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            await event.setTicketToUsed(new BN('1'), new BN('2')).should.be.rejectedWith(EVM_REVERT)
             // Paused (1) Stage
             await event.setStage(1)
-            await event.setTicketToUsed(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            await event.setTicketToUsed(new BN('1'), new BN('2')).should.be.rejectedWith(EVM_REVERT)
             // Paused (2) Stage
             await event.setStage(2)
-            await event.setTicketToUsed(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            await event.setTicketToUsed(new BN('1'), new BN('2')).should.be.rejectedWith(EVM_REVERT)
             // Cancelled (4) Stage
             await event.setStage(4)
-            await event.setTicketToUsed(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            await event.setTicketToUsed(new BN('1'), new BN('2')).should.be.rejectedWith(EVM_REVERT)
             // Closed (5) Stage
             await event.setStage(5)
-            await event.setTicketToUsed(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            await event.setTicketToUsed(new BN('1'), new BN('2')).should.be.rejectedWith(EVM_REVERT)
         })
 
         beforeEach(async () => {
             // Set stage to Checkin Open
+            await event.setStage(1)
+            await event.buyTicket({ value: (_price), from: buyer1 })
             await event.setStage(3)
         })
         
-        // it('checking ticket mark as used', async () => {
-        //     console.log("GET BUYER 1 TICKETS BEFORE")
-        //     console.log(await event.tickets(buyer1));
-        //     await event.buyTicket({ value: (_price), from: buyer1 }) 
-        //     console.log("GET BUYER 1 TICKETS AFTER")
-        //     console.log(await event.tickets(buyer1));
-        //     const qrCode = await event.setTicketToUsed({ sQRCodeKey: "12345", from: buyer1 })
-        //     // console.log("QR CODE")
-        //     // console.log(qrCode)
-        // })
-    })
+        it('checking ticket mark as used', async () => {
+            let ticketID = 0
+            let sQRCodeKey = "12345"
+            let t = await event.setTicketToUsed(ticketID, sQRCodeKey, { from: buyer1 })
+            truffleAssert.eventEmitted(t, 'TicketUsed', (ev) => {
 
-    describe('withdraw', async () => {
+                const sQRexpected = "12345"
+                const sQRactual = ev['sQRCodeKey'].toString()
 
-        beforeEach(async () => {
-            // Set stage to active
-            await event.setStage(1)
-        })
-
-        it('user can withdraw money after ticket overpay', async () => {
-            // Overpay for ticket
-            const overpay = 1e10;
-            await event.buyTicket({ value: (_price + overpay), from: buyer1 })
-            
-            // Check user SC balance before and after withdraw
-            const beforeSC = parseInt(await event.balances(buyer1))
-            const beforeUser = web3.utils.toBN(await web3.eth.getBalance(buyer1))
-            
-            const receipt = await event.withdraw({ from: buyer1 })
-            const gasUsed = web3.utils.toBN(receipt.receipt.gasUsed)
-            const tx = await web3.eth.getTransaction(receipt.tx)
-            const gasPrice = web3.utils.toBN(tx.gasPrice)
-            const txFee = gasPrice.mul(gasUsed);
-
-            const afterSC = parseInt(await event.balances(buyer1))
-            const afterUser = web3.utils.toBN(await web3.eth.getBalance(buyer1))
-
-            const beforeUserAddDiff = beforeUser.sub(txFee).add(web3.utils.toBN(overpay))
-
-            // Check user's own account balance before and after withdraw
-            assert.equal(afterUser.toString(), beforeUserAddDiff.toString(), 'Customer account should be refunded after withdraw') 
-            // Check user's SC balance before and after withdraw
-            assert.equal(afterSC + overpay, beforeSC, 'Customer balance should be updated after withdraw')
-        })
-
-        it('user cannot withdraw money if did not overpay for ticket and event not cancelled or paused', async () => {
-            await event.buyTicket({ value: _price, from: buyer1 })
-            await event.withdraw({ from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
-        })
-
-        it('user cannot withdraw before buying ticket', async () => {
-            await event.withdraw({ from: buyer2 }).should.be.rejectedWith(EVM_REVERT)
-        })
-
-        it('user cannot withdraw money multiple times', async () => {
-            const overpay = 100
-            await event.buyTicket({ value: (_price + overpay), from: buyer3 })
-            await event.withdraw({ from: buyer3 })
-
-            await event.withdraw({ from: buyer3 }).should.be.rejectedWith(EVM_REVERT)
-        })
-
-        it('withdraw when event cancelled and no ticket overpay', async () => {
-            // Buy ticket
-            await event.buyTicket({ value: _price, from: buyer1 })
-            
-            // Event cancelled
-            await event.setStage(4)
-
-            // Check user SC balance before and after withdraw
-            const beforeUser = web3.utils.toBN(await web3.eth.getBalance(buyer1))
-            
-            const receipt = await event.withdraw({ from: buyer1 })
-            const gasUsed = web3.utils.toBN(receipt.receipt.gasUsed)
-            const tx = await web3.eth.getTransaction(receipt.tx)
-            const gasPrice = web3.utils.toBN(tx.gasPrice)
-            const txFee = gasPrice.mul(gasUsed);
-
-            const afterUser = web3.utils.toBN(await web3.eth.getBalance(buyer1))
-
-            const beforeUserAddDiff = beforeUser.sub(txFee).add(web3.utils.toBN(_price))
-
-            // Check user's own account balance before and after withdraw
-            assert.equal(afterUser.toString(), beforeUserAddDiff.toString(), 'Customer account should be refunded after withdraw') 
-
-        })
-
-        it('withdraw when event paused and no ticket overpay', async () => {
-            // Buy ticket
-            await event.buyTicket({ value: _price, from: buyer1 })
-            
-            // Event paused
-            await event.setStage(2)
-
-            // Check user SC balance before and after withdraw
-            const beforeUser = web3.utils.toBN(await web3.eth.getBalance(buyer1))
-            
-            const receipt = await event.withdraw({ from: buyer1 })
-            const gasUsed = web3.utils.toBN(receipt.receipt.gasUsed)
-            const tx = await web3.eth.getTransaction(receipt.tx)
-            const gasPrice = web3.utils.toBN(tx.gasPrice)
-            const txFee = gasPrice.mul(gasUsed);
-
-            const afterUser = web3.utils.toBN(await web3.eth.getBalance(buyer1))
-
-            const beforeUserAddDiff = beforeUser.sub(txFee).add(web3.utils.toBN(_price))
-
-            // Check user's own account balance before and after withdraw
-            assert.equal(afterUser.toString(), beforeUserAddDiff.toString(), 'Customer account should be refunded after withdraw') 
-
-        })
-
-        it('withdraw when event cancelled and ticket overpay', async () => {
-            // Buy ticket
-            const overpay = 1e10
-            await event.buyTicket({ value: (_price + overpay), from: buyer2 })
-            
-            // Event cancelled
-            await event.setStage(4)
-
-            // Check user SC balance before and after withdraw
-            const beforeUser = web3.utils.toBN(await web3.eth.getBalance(buyer2))
-            
-            const receipt = await event.withdraw({ from: buyer2 })
-            const gasUsed = web3.utils.toBN(receipt.receipt.gasUsed)
-            const tx = await web3.eth.getTransaction(receipt.tx)
-            const gasPrice = web3.utils.toBN(tx.gasPrice)
-            const txFee = gasPrice.mul(gasUsed);
-
-            const afterUser = web3.utils.toBN(await web3.eth.getBalance(buyer2))
-
-            const beforeUserAddDiff = beforeUser.sub(txFee).add(web3.utils.toBN(_price)).add(web3.utils.toBN(overpay))
-
-            // Check user's own account balance before and after withdraw
-            assert.equal(afterUser.toString(), beforeUserAddDiff.toString(), 'Customer account should be refunded after withdraw') 
-        })
-
-        it('withdraw when event paused and ticket overpay', async () => {
-            // Buy ticket
-            const overpay = 1e10
-            await event.buyTicket({ value: (_price + overpay), from: buyer2 })
-            
-            // Event paused
-            await event.setStage(2)
-
-            // Check user SC balance before and after withdraw
-            const beforeUser = web3.utils.toBN(await web3.eth.getBalance(buyer2))
-            
-            const receipt = await event.withdraw({ from: buyer2 })
-            const gasUsed = web3.utils.toBN(receipt.receipt.gasUsed)
-            const tx = await web3.eth.getTransaction(receipt.tx)
-            const gasPrice = web3.utils.toBN(tx.gasPrice)
-            const txFee = gasPrice.mul(gasUsed);
-
-            const afterUser = web3.utils.toBN(await web3.eth.getBalance(buyer2))
-
-            const beforeUserAddDiff = beforeUser.sub(txFee).add(web3.utils.toBN(_price)).add(web3.utils.toBN(overpay))
-
-            // Check user's own account balance before and after withdraw
-            assert.equal(afterUser.toString(), beforeUserAddDiff.toString(), 'Customer account should be refunded after withdraw') 
-        })
-
-        it('event emitted when user withdraws money', async () => {
-            const overpay = 100
-            await event.buyTicket({ value: (_price + overpay), from: buyer1 })
-            const withdraw = await event.withdraw({ from: buyer1 })
-
-            truffleAssert.eventEmitted(withdraw, 'WithdrawMoney', (ev) => {
-                // Check receiver address
-                const receiver_expected = buyer1.toString()
-                const receiver_actual = ev['receiver'].toString()
-
-                // Checking money refuned
-                const money_expected = overpay.toString()
-                const money_actual = ev['money'].toString()
-
-                return money_actual === money_expected && receiver_actual === receiver_expected
+                return sQRactual === sQRexpected
             })
         })
 
+        it('confirm ticket set to used', async() => {
+            let ticketID = 0
+            let sQRCodeKey = "12345"
+            await event.setTicketToUsed(ticketID, sQRCodeKey, { from: buyer1 })
+            let x = await event.getTicketStatus(ticketID, { from: buyer1 })
+            assert.equal(x.valueOf(), 2, 'ticket should be used')
+        })
     })
 
-    describe('owner withdraw', async () => {
+    describe('setTicketForSale', async () => {
 
-        // Non-owner cannot withdraw money
-        it('non-owner cannot withdraw money', async () => {
-            await event.ownerWithdraw({ from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
-        })
-        
-        // Owner cannot withdraw money if stage is not closed 
-        it('owner cannot withdraw money if stage is not closed', async () => {
+        it('checking cannot set Ticket For Sale unless Active stage', async () => {
             // Prep (0) Stage
             await event.setStage(0)
-            await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
-            // Active (1) Stage
-            await event.setStage(1)
-            await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
-            // Paused (2) Stage
+            await event.setTicketForSale(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            // Paused (1) Stage
             await event.setStage(2)
-            await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
-            // Checkin Open (3) Stage
+            await event.setTicketForSale(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            // Paused (2) Stage
             await event.setStage(3)
-            await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+            await event.setTicketForSale(new BN('1')).should.be.rejectedWith(EVM_REVERT)
             // Cancelled (4) Stage
             await event.setStage(4)
-            await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
-        })
-
-        it('owner cannot withdraw money if no money in account', async () => {
+            await event.setTicketForSale(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            // Closed (5) Stage
             await event.setStage(5)
-            await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+            await event.setTicketForSale(new BN('1')).should.be.rejectedWith(EVM_REVERT)
         })
 
-        // Owner withdraw money after tickets purchased
-        it('owner successfully withdraws money', async () => {
-            // User buys ticket
+        beforeEach(async () => {
+            // Set stage to Active
             await event.setStage(1)
-            await event.buyTicket({ value: _price, from: buyer2 })
-            
-            // Event closed
-            await event.setStage(5)
-
-            // Check user SC balance before and after withdraw
-            const beforeSC = parseInt(await web3.eth.getBalance(event.address))
-            const beforeOwner = web3.utils.toBN(await web3.eth.getBalance(owner))
-            
-            const receipt = await event.ownerWithdraw({ from: owner })
-            const gasUsed = web3.utils.toBN(receipt.receipt.gasUsed)
-            const tx = await web3.eth.getTransaction(receipt.tx)
-            const gasPrice = web3.utils.toBN(tx.gasPrice)
-            const txFee = gasPrice.mul(gasUsed);
-
-            const afterSC = parseInt(await web3.eth.getBalance(event.address))
-            const afterOwner = web3.utils.toBN(await web3.eth.getBalance(owner))
-
-            const beforeOwnerAddDiff = beforeOwner.sub(txFee).add(web3.utils.toBN(_price))
-
-            // Check user's own account balance before and after withdraw
-            assert.equal(beforeSC, _price, 'Smart contract balance not correct after user buys ticket')
-            assert.equal(afterSC, 0, 'Smart contract balance not correct after owner withdraws')
-            assert.equal(afterOwner.toString(), beforeOwnerAddDiff.toString(), 'Owner should withdraw correct amount') 
+            await event.buyTicket({ value: (_price), from: buyer1 })
         })
-
-        // Owner withdraw money after tickets purchased
-        it('owner cannot withdraw twice', async () => {
-            // User buys ticket
-            await event.setStage(1)
-            await event.buyTicket({ value: _price, from: buyer2 })
-            
-            // Event closed
-            await event.setStage(5)
-            
-            await event.ownerWithdraw({ from: owner })
-            await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
-        })
-
-        // Withdraw money emits event
-        it('event emitted when owner withdraws money', async () => {
-            await event.setStage(1)
-            await event.buyTicket({ value: _price, from: buyer2 })
-            await event.setStage(5)
-            const withdraw = await event.ownerWithdraw({ from: owner })
-
-            truffleAssert.eventEmitted(withdraw, 'OwnerWithdrawMoney', (ev) => {
-                // Check receiver address
-                const owner_expected = owner.toString()
-                const owner_actual = ev['owner'].toString()
-
-                // Checking money refuned
-                const money_expected = _price.toString()
-                const money_actual = ev['money'].toString()
-
-                return money_actual === money_expected && owner_actual === owner_expected
-            })
-        })
-
-
-    })
-})
-
-// Event Creator testing
-contract('EventCreator', (accounts) => {
-    // Variables for creating the Event Contract
-    let eventCreator
-    const _numTickets = 5;
-    const _price = 50;
-    const _canBeResold = true;
-    const _royaltyPercent = 20;
-    const _eventName = 'EventName'
-    const _eventSymbol = 'EventSymbol'
-
-    // Variables for users from Ganache
-    const owner = accounts[0]
-    const buyer1 = accounts[1]
-    const buyer2 = accounts[2]
-
-    beforeEach(async () => {
-        eventCreator = await EventCreator.new()
-    })
-
-    // EventCreator Contract deployment
-    describe('deployment', async () => {
-        // Test address
-        // it contains test examples
-        it('EventCreator contract deploys successfully', async () => {
-            // NOTE: can only use await inside of an async function call
-            // Make sure deployed contract exists by ensuring not an empty string
-            const address = eventCreator.address
-            assert.notEqual(address,'')
-            assert.notEqual(address, 0x0)
-            assert.notEqual(address, null)
-            assert.notEqual(address, undefined)
-        })
-    })
-
-    // Create new event
-    describe('create event', async () => {
         
-        it('Create event success', async () => {
-            const address = await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
-            assert.notEqual(address,'')
-            assert.notEqual(address, 0x0)
-            assert.notEqual(address, null)
-            assert.notEqual(address, undefined)
-        })
+        it('checking ticket mark as available for sale', async () => {
+            //console.log(await event.tickets(buyer1));
+            let ticketID = 0
+            let e = await event.setTicketForSale(ticketID, { from: buyer1 })
+            truffleAssert.eventEmitted(e, 'TicketForSale', (ev) => {
+                let ticketID_expected = '0'
+                let ticketID_actual = ev['ticketID'].toString()
 
-        // emitEvent
-        it('Checking createEvent success, address added to events list matches emitted event address', async () => {
-            let event = await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol, { from: buyer1 })
-            let events = await eventCreator.getEvents()
-            let eventAddress = events[0]
-
-            truffleAssert.eventEmitted(event, 'CreateEvent', (ev) => {
-                // Check Buyer Address
-                const creator_expected = buyer1.toString()
-                const creator_actual = ev['_creator'].toString()
-
-                // Check Event Address
-                const event_expected = eventAddress.toString()
-                const event_actual = ev['_event'].toString()
-
-                return creator_expected === creator_actual && event_expected === event_actual
+                return ticketID_actual === ticketID_expected
             })
         })
 
-        it('getEventCount returns correct number of events', async () => {
-            const numEventsBefore = await eventCreator.getEventCount()
-            assert.equal(numEventsBefore, 0, 'Starting number of events should be 0')
-            
-            await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
-            const numEventsAfter1 = await eventCreator.getEventCount()
-            assert.equal(numEventsAfter1, 1, 'The number of events should increase after adding an event')
-            
-            await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
-            const numEventsAfter2 = await eventCreator.getEventCount()
-            assert.equal(numEventsAfter2, 2, 'The number of events should increase after adding an event')
+        it('confirm ticket set to used', async() => {
+            let ticketID = 0
+            await event.setTicketForSale(ticketID, { from: buyer1 })
+            let x = await event.getTicketStatus(ticketID, { from: buyer1 })
+            assert.equal(x.valueOf(), 3, 'ticket should be vaialable for sale')
         })
 
-        it('getEvents returns list of event addresses', async () => {
-            // Note: We already checked that the event address equaled the event emitted
-            eventCreator = await EventCreator.new()
+        it('checking cannot set for sale if used', async () => {
+            let ticketID = 0
+            let sQRCodeKey = "12345"
+            await event.setStage(3)
+            await event.setTicketToUsed(ticketID, sQRCodeKey, { from: buyer1 })
+            await event.setTicketForSale(ticketID, { from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
+        })
 
-            const address1 = await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
-            assert.notEqual(address1,'')
-            assert.notEqual(address1, 0x0)
-            assert.notEqual(address1, null)
-            assert.notEqual(address1, undefined)
+    })
 
-            const address2 = await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
-            assert.notEqual(address2,'')
-            assert.notEqual(address2, 0x0)
-            assert.notEqual(address2, null)
-            assert.notEqual(address2, undefined)
+    describe('Buy Ticket from User', async () => {
+        it('checking cannot buy ticket from user unless stage active', async () => {
+            await event.setStage(0)
+            await event.buyTicketFromUser(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            // Paused (1) Stage
+            await event.setStage(2)
+            await event.buyTicketFromUser(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            // Paused (2) Stage
+            await event.setStage(3)
+            await event.buyTicketFromUser(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            // Cancelled (4) Stage
+            await event.setStage(4)
+            await event.buyTicketFromUser(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            // Closed (5) Stage
+            await event.setStage(5)
+            await event.buyTicketFromUser(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+        })
+
+        beforeEach(async () => {
+            await event.setStage(1)
+            await event.buyTicket({ value: (_price), from: buyer1 })
+        })
+
+        it('set ticket for sale', async () => {
+            let ticketID = 0
+            let e = await event.setTicketForSale(ticketID, { from: buyer1 })
+            let x = await event.getTicketStatus(ticketID, { from: buyer1 })
+            assert.equal(x.valueOf(), 3, 'ticket should be vaialable for sale')
+        })
+
+        it('buy ticket from buyer 1', async () => {
+            let ticketID = 0
+            await event.setTicketForSale(ticketID, { from: buyer1 })
+            await event.approveAsBuyer(buyer2, ticketID, { from: buyer1 })
+            let t  = await event.buyTicketFromUser(ticketID, { value: (_price), from: buyer2 })
+            truffleAssert.eventEmitted(t, 'TicketSold', (ev) => {
+                let seller_expected = buyer1
+                let seller_actual = ev['seller'].toString()
+
+                let buyer_expected = buyer2
+                let buyer_actual = ev['buyer'].toString()
+
+                let ticketID_expected = '0'
+                let ticketID_actual = ev['ticketID'].toString()
+
+                return seller_actual == seller_expected && buyer_actual == buyer_expected && ticketID_actual == ticketID_expected
+            })
+        })
+
+        it('ticket should belong to buyer 2', async () => {
+            let ticketID = 0
+            await event.setTicketForSale(ticketID, { from: buyer1 })
+            await event.approveAsBuyer(buyer2, ticketID, { from: buyer1 })
+            await event.buyTicketFromUser(ticketID, { value: (_price), from: buyer2 })
+            let newTicketOwner = await event.ownerOf(ticketID)
+            assert.equal(newTicketOwner.valueOf(), buyer2, "Owner should be buyer 2")
+        })
+
+        it('checking buyer 2 recieves NFT after buying ticket from buyer 1', async () => {
+            let bal = await event.balanceOf(buyer2, { from: buyer2 })
+            assert.equal(bal, 0, 'Buyer 2 should have 0 NFTs before purchasing any tickets')
+
+            await event.buyTicket({ value:(_price), from: buyer1 })
+            let ticketID = 0
+            await event.setTicketForSale(ticketID, { from: buyer1 })
+            await event.approveAsBuyer(buyer2, ticketID, { from: buyer1 })
+            await event.buyTicketFromUser(ticketID, { value: (_price), from: buyer2 })
+            bal = await event.balanceOf(buyer2, { from: buyer2 })
+            assert.equal(bal, 1, "Buyer 2 should have 1 NFT after buying ticket from buyer1")
         })
     })
+
+//     describe('withdraw', async () => {
+
+//         beforeEach(async () => {
+//             // Set stage to active
+//             await event.setStage(1)
+//         })
+
+//         it('user can withdraw money after ticket overpay', async () => {
+//             // Overpay for ticket
+//             const overpay = 1e10;
+//             await event.buyTicket({ value: (_price + overpay), from: buyer1 })
+            
+//             // Check user SC balance before and after withdraw
+//             const beforeSC = parseInt(await event.balances(buyer1))
+//             const beforeUser = web3.utils.toBN(await web3.eth.getBalance(buyer1))
+            
+//             const receipt = await event.withdraw({ from: buyer1 })
+//             const gasUsed = web3.utils.toBN(receipt.receipt.gasUsed)
+//             const tx = await web3.eth.getTransaction(receipt.tx)
+//             const gasPrice = web3.utils.toBN(tx.gasPrice)
+//             const txFee = gasPrice.mul(gasUsed);
+
+//             const afterSC = parseInt(await event.balances(buyer1))
+//             const afterUser = web3.utils.toBN(await web3.eth.getBalance(buyer1))
+
+//             const beforeUserAddDiff = beforeUser.sub(txFee).add(web3.utils.toBN(overpay))
+
+//             // Check user's own account balance before and after withdraw
+//             assert.equal(afterUser.toString(), beforeUserAddDiff.toString(), 'Customer account should be refunded after withdraw') 
+//             // Check user's SC balance before and after withdraw
+//             assert.equal(afterSC + overpay, beforeSC, 'Customer balance should be updated after withdraw')
+//         })
+
+//         it('user cannot withdraw money if did not overpay for ticket and event not cancelled or paused', async () => {
+//             await event.buyTicket({ value: _price, from: buyer1 })
+//             await event.withdraw({ from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
+//         })
+
+//         it('user cannot withdraw before buying ticket', async () => {
+//             await event.withdraw({ from: buyer2 }).should.be.rejectedWith(EVM_REVERT)
+//         })
+
+//         it('user cannot withdraw money multiple times', async () => {
+//             const overpay = 100
+//             await event.buyTicket({ value: (_price + overpay), from: buyer3 })
+//             await event.withdraw({ from: buyer3 })
+
+//             await event.withdraw({ from: buyer3 }).should.be.rejectedWith(EVM_REVERT)
+//         })
+
+//         it('withdraw when event cancelled and no ticket overpay', async () => {
+//             // Buy ticket
+//             await event.buyTicket({ value: _price, from: buyer1 })
+            
+//             // Event cancelled
+//             await event.setStage(4)
+
+//             // Check user SC balance before and after withdraw
+//             const beforeUser = web3.utils.toBN(await web3.eth.getBalance(buyer1))
+            
+//             const receipt = await event.withdraw({ from: buyer1 })
+//             const gasUsed = web3.utils.toBN(receipt.receipt.gasUsed)
+//             const tx = await web3.eth.getTransaction(receipt.tx)
+//             const gasPrice = web3.utils.toBN(tx.gasPrice)
+//             const txFee = gasPrice.mul(gasUsed);
+
+//             const afterUser = web3.utils.toBN(await web3.eth.getBalance(buyer1))
+
+//             const beforeUserAddDiff = beforeUser.sub(txFee).add(web3.utils.toBN(_price))
+
+//             // Check user's own account balance before and after withdraw
+//             assert.equal(afterUser.toString(), beforeUserAddDiff.toString(), 'Customer account should be refunded after withdraw') 
+
+//         })
+
+//         it('withdraw when event paused and no ticket overpay', async () => {
+//             // Buy ticket
+//             await event.buyTicket({ value: _price, from: buyer1 })
+            
+//             // Event paused
+//             await event.setStage(2)
+
+//             // Check user SC balance before and after withdraw
+//             const beforeUser = web3.utils.toBN(await web3.eth.getBalance(buyer1))
+            
+//             const receipt = await event.withdraw({ from: buyer1 })
+//             const gasUsed = web3.utils.toBN(receipt.receipt.gasUsed)
+//             const tx = await web3.eth.getTransaction(receipt.tx)
+//             const gasPrice = web3.utils.toBN(tx.gasPrice)
+//             const txFee = gasPrice.mul(gasUsed);
+
+//             const afterUser = web3.utils.toBN(await web3.eth.getBalance(buyer1))
+
+//             const beforeUserAddDiff = beforeUser.sub(txFee).add(web3.utils.toBN(_price))
+
+//             // Check user's own account balance before and after withdraw
+//             assert.equal(afterUser.toString(), beforeUserAddDiff.toString(), 'Customer account should be refunded after withdraw') 
+
+//         })
+
+//         it('withdraw when event cancelled and ticket overpay', async () => {
+//             // Buy ticket
+//             const overpay = 1e10
+//             await event.buyTicket({ value: (_price + overpay), from: buyer2 })
+            
+//             // Event cancelled
+//             await event.setStage(4)
+
+//             // Check user SC balance before and after withdraw
+//             const beforeUser = web3.utils.toBN(await web3.eth.getBalance(buyer2))
+            
+//             const receipt = await event.withdraw({ from: buyer2 })
+//             const gasUsed = web3.utils.toBN(receipt.receipt.gasUsed)
+//             const tx = await web3.eth.getTransaction(receipt.tx)
+//             const gasPrice = web3.utils.toBN(tx.gasPrice)
+//             const txFee = gasPrice.mul(gasUsed);
+
+//             const afterUser = web3.utils.toBN(await web3.eth.getBalance(buyer2))
+
+//             const beforeUserAddDiff = beforeUser.sub(txFee).add(web3.utils.toBN(_price)).add(web3.utils.toBN(overpay))
+
+//             // Check user's own account balance before and after withdraw
+//             assert.equal(afterUser.toString(), beforeUserAddDiff.toString(), 'Customer account should be refunded after withdraw') 
+//         })
+
+//         it('withdraw when event paused and ticket overpay', async () => {
+//             // Buy ticket
+//             const overpay = 1e10
+//             await event.buyTicket({ value: (_price + overpay), from: buyer2 })
+            
+//             // Event paused
+//             await event.setStage(2)
+
+//             // Check user SC balance before and after withdraw
+//             const beforeUser = web3.utils.toBN(await web3.eth.getBalance(buyer2))
+            
+//             const receipt = await event.withdraw({ from: buyer2 })
+//             const gasUsed = web3.utils.toBN(receipt.receipt.gasUsed)
+//             const tx = await web3.eth.getTransaction(receipt.tx)
+//             const gasPrice = web3.utils.toBN(tx.gasPrice)
+//             const txFee = gasPrice.mul(gasUsed);
+
+//             const afterUser = web3.utils.toBN(await web3.eth.getBalance(buyer2))
+
+//             const beforeUserAddDiff = beforeUser.sub(txFee).add(web3.utils.toBN(_price)).add(web3.utils.toBN(overpay))
+
+//             // Check user's own account balance before and after withdraw
+//             assert.equal(afterUser.toString(), beforeUserAddDiff.toString(), 'Customer account should be refunded after withdraw') 
+//         })
+
+//         it('event emitted when user withdraws money', async () => {
+//             const overpay = 100
+//             await event.buyTicket({ value: (_price + overpay), from: buyer1 })
+//             const withdraw = await event.withdraw({ from: buyer1 })
+
+//             truffleAssert.eventEmitted(withdraw, 'WithdrawMoney', (ev) => {
+//                 // Check receiver address
+//                 const receiver_expected = buyer1.toString()
+//                 const receiver_actual = ev['receiver'].toString()
+
+//                 // Checking money refuned
+//                 const money_expected = overpay.toString()
+//                 const money_actual = ev['money'].toString()
+
+//                 return money_actual === money_expected && receiver_actual === receiver_expected
+//             })
+//         })
+
+//     })
+
+//     describe('owner withdraw', async () => {
+
+//         // Non-owner cannot withdraw money
+//         it('non-owner cannot withdraw money', async () => {
+//             await event.ownerWithdraw({ from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
+//         })
+        
+//         // Owner cannot withdraw money if stage is not closed 
+//         it('owner cannot withdraw money if stage is not closed', async () => {
+//             // Prep (0) Stage
+//             await event.setStage(0)
+//             await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+//             // Active (1) Stage
+//             await event.setStage(1)
+//             await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+//             // Paused (2) Stage
+//             await event.setStage(2)
+//             await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+//             // Checkin Open (3) Stage
+//             await event.setStage(3)
+//             await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+//             // Cancelled (4) Stage
+//             await event.setStage(4)
+//             await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+//         })
+
+//         it('owner cannot withdraw money if no money in account', async () => {
+//             await event.setStage(5)
+//             await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+//         })
+
+//         // Owner withdraw money after tickets purchased
+//         it('owner successfully withdraws money', async () => {
+//             // User buys ticket
+//             await event.setStage(1)
+//             await event.buyTicket({ value: _price, from: buyer2 })
+            
+//             // Event closed
+//             await event.setStage(5)
+
+//             // Check user SC balance before and after withdraw
+//             const beforeSC = parseInt(await web3.eth.getBalance(event.address))
+//             const beforeOwner = web3.utils.toBN(await web3.eth.getBalance(owner))
+            
+//             const receipt = await event.ownerWithdraw({ from: owner })
+//             const gasUsed = web3.utils.toBN(receipt.receipt.gasUsed)
+//             const tx = await web3.eth.getTransaction(receipt.tx)
+//             const gasPrice = web3.utils.toBN(tx.gasPrice)
+//             const txFee = gasPrice.mul(gasUsed);
+
+//             const afterSC = parseInt(await web3.eth.getBalance(event.address))
+//             const afterOwner = web3.utils.toBN(await web3.eth.getBalance(owner))
+
+//             const beforeOwnerAddDiff = beforeOwner.sub(txFee).add(web3.utils.toBN(_price))
+
+//             // Check user's own account balance before and after withdraw
+//             assert.equal(beforeSC, _price, 'Smart contract balance not correct after user buys ticket')
+//             assert.equal(afterSC, 0, 'Smart contract balance not correct after owner withdraws')
+//             assert.equal(afterOwner.toString(), beforeOwnerAddDiff.toString(), 'Owner should withdraw correct amount') 
+//         })
+
+//         // Owner withdraw money after tickets purchased
+//         it('owner cannot withdraw twice', async () => {
+//             // User buys ticket
+//             await event.setStage(1)
+//             await event.buyTicket({ value: _price, from: buyer2 })
+            
+//             // Event closed
+//             await event.setStage(5)
+            
+//             await event.ownerWithdraw({ from: owner })
+//             await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+//         })
+
+//         // Withdraw money emits event
+//         it('event emitted when owner withdraws money', async () => {
+//             await event.setStage(1)
+//             await event.buyTicket({ value: _price, from: buyer2 })
+//             await event.setStage(5)
+//             const withdraw = await event.ownerWithdraw({ from: owner })
+
+//             truffleAssert.eventEmitted(withdraw, 'OwnerWithdrawMoney', (ev) => {
+//                 // Check receiver address
+//                 const owner_expected = owner.toString()
+//                 const owner_actual = ev['owner'].toString()
+
+//                 // Checking money refuned
+//                 const money_expected = _price.toString()
+//                 const money_actual = ev['money'].toString()
+
+//                 return money_actual === money_expected && owner_actual === owner_expected
+//             })
+//         })
+
+
+//     })
+// })
+
+// // Event Creator testing
+// contract('EventCreator', (accounts) => {
+//     // Variables for creating the Event Contract
+//     let eventCreator
+//     const _numTickets = 5;
+//     const _price = 50;
+//     const _canBeResold = true;
+//     const _royaltyPercent = 20;
+//     const _eventName = 'EventName'
+//     const _eventSymbol = 'EventSymbol'
+
+//     // Variables for users from Ganache
+//     const owner = accounts[0]
+//     const buyer1 = accounts[1]
+//     const buyer2 = accounts[2]
+
+//     beforeEach(async () => {
+//         eventCreator = await EventCreator.new()
+//     })
+
+//     // EventCreator Contract deployment
+//     describe('deployment', async () => {
+//         // Test address
+//         // it contains test examples
+//         it('EventCreator contract deploys successfully', async () => {
+//             // NOTE: can only use await inside of an async function call
+//             // Make sure deployed contract exists by ensuring not an empty string
+//             const address = eventCreator.address
+//             assert.notEqual(address,'')
+//             assert.notEqual(address, 0x0)
+//             assert.notEqual(address, null)
+//             assert.notEqual(address, undefined)
+//         })
+//     })
+
+//     // Create new event
+//     describe('create event', async () => {
+        
+//         it('Create event success', async () => {
+//             const address = await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
+//             assert.notEqual(address,'')
+//             assert.notEqual(address, 0x0)
+//             assert.notEqual(address, null)
+//             assert.notEqual(address, undefined)
+//         })
+
+//         // emitEvent
+//         it('Checking createEvent success, address added to events list matches emitted event address', async () => {
+//             let event = await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol, { from: buyer1 })
+//             let events = await eventCreator.getEvents()
+//             let eventAddress = events[0]
+
+//             truffleAssert.eventEmitted(event, 'CreateEvent', (ev) => {
+//                 // Check Buyer Address
+//                 const creator_expected = buyer1.toString()
+//                 const creator_actual = ev['_creator'].toString()
+
+//                 // Check Event Address
+//                 const event_expected = eventAddress.toString()
+//                 const event_actual = ev['_event'].toString()
+
+//                 return creator_expected === creator_actual && event_expected === event_actual
+//             })
+//         })
+
+//         it('getEventCount returns correct number of events', async () => {
+//             const numEventsBefore = await eventCreator.getEventCount()
+//             assert.equal(numEventsBefore, 0, 'Starting number of events should be 0')
+            
+//             await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
+//             const numEventsAfter1 = await eventCreator.getEventCount()
+//             assert.equal(numEventsAfter1, 1, 'The number of events should increase after adding an event')
+            
+//             await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
+//             const numEventsAfter2 = await eventCreator.getEventCount()
+//             assert.equal(numEventsAfter2, 2, 'The number of events should increase after adding an event')
+//         })
+
+//         it('getEvents returns list of event addresses', async () => {
+//             // Note: We already checked that the event address equaled the event emitted
+//             eventCreator = await EventCreator.new()
+
+//             const address1 = await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
+//             assert.notEqual(address1,'')
+//             assert.notEqual(address1, 0x0)
+//             assert.notEqual(address1, null)
+//             assert.notEqual(address1, undefined)
+
+//             const address2 = await eventCreator.createEvent(_numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol)
+//             assert.notEqual(address2,'')
+//             assert.notEqual(address2, 0x0)
+//             assert.notEqual(address2, null)
+//             assert.notEqual(address2, undefined)
+//         })
+//     })
 
 })
