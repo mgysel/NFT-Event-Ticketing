@@ -1,5 +1,6 @@
 from flask import Flask, request, redirect, url_for
 from flask_cors import CORS
+from werkzeug.security import generate_password_hash, check_password_hash
 from bson.objectid import ObjectId
 # imports for PyJWT authentication
 import jwt
@@ -10,6 +11,7 @@ import json
 from flask.helpers import make_response
 import pymongo
 from pymongo import MongoClient
+import hashlib
 
 
 APP = Flask(__name__)
@@ -19,15 +21,12 @@ CORS(APP)
 APP.config['SECRET_KEY'] = 'your secret key'
 
 # Connect to MongoDB
-client = MongoClient("mongodb+srv://Pramith:pramith123@cluster0.fv4q5.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
-print("Connection Successfull");
-db = client.get_database('test')
+connection_string = "mongodb+srv://comp4337:comp4337@cluster0.mzbuz.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
+client = MongoClient(connection_string)
+
+
 
 ########## EVENT ROUTES ##########
-@APP.route('/')
-def hello():
-    return 'Hello, World!'
-
 @APP.route('/event/add', methods=['POST'])
 def event_add():
     '''
@@ -35,72 +34,75 @@ def event_add():
     Adds event to database
     '''
     data = request.get_json()
-    # result = add_event(data, APP.secret_key)
-    return
+    fields = ['eventName', 'qrCode']
+    for field in fields:
+        if not field in data:
+            return make_response(
+                dumps(
+                    {"message": "No eventName or qrCode parameters."}
+                ), 
+                400
+            ) 
 
-@APP.route('/event/<event_id>', methods=['GET'])
+    event_name = data['eventName']
+    qr_code = hashlib.sha256(data['qrCode'].encode()).hexdigest()
+    print(qr_code)
+    
+    code_json = {
+        'event_name': event_name,
+        'qr_code': qr_code
+    }
+
+    db = client['project']
+    coll = db['events']
+    coll.insert_one(code_json)
+
+    return make_response(
+        dumps(
+            {
+                "result": "success",
+            }
+        ), 
+        201
+    ) 
+
+
+
+
+@APP.route('/event/query', methods=['GET'])
 def event_get():
     '''
-    Returns an event given an event ID
+    Returns True if QR Code is valid, false otherwise
     '''
-    data = request.get_json()
-    # result = get_event(data, APP.secret_key)
-    return
+    # Get eventName and qrCode, 400 eror if parameters not in args
+    event_name = request.args.get('eventName')
+    qr_code = hashlib.sha256(request.args.get('qrCode').encode()).hexdigest()
+    if event_name is None or qr_code is None:    
+        return make_response(
+        dumps(
+            {"message": "No eventName or qrCode parameters."}
+        ), 
+        400
+    ) 
 
+    # Get all events 
+    db = client['project']
+    coll = db['events']
+    code_json = coll.find_one({ 'event_name': event_name, 'qr_code': qr_code })
 
+    if code_json:
+        result = True
+    else:
+        result = False
 
-
-########## TICKET ROUTES ##########
-
-@APP.route('/ticket/add', methods=['POST'])
-def add():
-    '''
-    Given a ticketID and userID
-    Adds ticket to database
-    '''
-    data = request.get_json()
-    # result = add_ticket(data, APP.secret_key)
-    return
-
-@APP.route('/ticket/markAsUsed', methods=['POST'])
-def markasUsed():
-    data = request.get_json()
-    db.todos.insert_one({'title': "todo title", 'body': "todo body"})
-    return flask.jsonify(message="success")
-
-@APP.route('/tickets/<user_id>', methods=['GET'])
-def ticket_get():
-    '''
-    Given a ticketID and userID
-    Adds ticket to database
-    '''
-    data = request.get_json()
-    # result = get_ticket(data, APP.secret_key)
-    return
-
-
-
-
-########## AUTH ROUTES ##########
-
-@APP.route('/auth/register', methods=['POST'])
-def register_user():
-    '''
-    Registers a user
-    '''
-    data = request.get_json()
-    # result = auth_register(data, APP.secret_key)
-    return 
-
-@APP.route('/auth/login', methods=['POST'])
-def login_user():
-    '''
-    Logs in a user
-    '''
-    data = request.get_json()
-    # result = auth_login(data, APP.secret_key)
-    return 
-
+    return make_response(
+        dumps(
+            {
+                "result": result,
+            }
+        ), 
+        200
+    ) 
 
 if __name__ == "__main__":
-    APP.run(port=(int(sys.argv[1]) if len(sys.argv) == 2 else 2119), debug=True)
+    APP.run(port=(int(sys.argv[1]) if len(sys.argv) == 2 else 2122), debug=True)

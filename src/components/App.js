@@ -57,10 +57,14 @@ function App() {
 
   const [sRandomHash, setSRandomHash] = useState("");
   const [eventStage, setEventStage] = useState(0);
+  const [qrCodeValue, setQrCodeValue] = useState(0);
+  const [verificationResult, setVerificationResult] = useState("");
 
   // Styling
   const lightGreen = "#C6F6DF";
   const darkGreen = "#276749";
+  
+  const backendServer = "http://127.0.0.1:2122";
   
   // On page load, load eventCreator contract
   useEffect(() => {
@@ -136,8 +140,28 @@ function App() {
             })
             .on("data", (event) => {
                 console.log("event fired: " + JSON.stringify(event.returnValues)); 
-                setArrQRCode([{eventName: event.returnValues.eventName, 
-                    RandomHash: event.returnValues.sQRCodeKey}]);
+                
+                const requestOptions = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({eventName: event.returnValues.eventName, 
+                        qrCode: event.returnValues.sQRCodeKey})
+                };
+                fetch(backendServer + "/event/add", requestOptions)
+                      .then(res => res.json())
+                      .then(
+                        (result) => {
+                            console.log(result);
+                             setArrQRCode([{eventName: event.returnValues.eventName, 
+                                RandomHash: event.returnValues.sQRCodeKey}]);
+                        },
+                        // Note: it's important to handle errors here
+                        // instead of a catch() block so that we don't swallow
+                        // exceptions from actual bugs in components.
+                        (error) => {
+                          console.error(error);
+                        }
+                      );
             })
             .on("error", function (error: any, receipt: any) {
                 console.log(error);
@@ -285,6 +309,32 @@ function App() {
     } catch(e) {
       console.log('Owner withdraw error: ', e)
     }
+  }
+  
+  async function verifyTicketQRCode(e) {
+      fetch(backendServer + "/event/query?" + new URLSearchParams({
+            eventName: formEventName,
+            qrCode: qrCodeValue,
+        }))
+      .then(res => res.json())
+      .then(
+        (result) => {
+            console.log("Verification Result");
+            console.log(result);
+            if(result.result){
+                setVerificationResult("Passed");
+            }
+            else {
+                setVerificationResult("Failed");
+            }
+        },
+        // Note: it's important to handle errors here
+        // instead of a catch() block so that we don't swallow
+        // exceptions from actual bugs in components.
+        (error) => {
+          console.error(error);
+        }
+      );
   }
 
   return (
@@ -534,8 +584,8 @@ function App() {
                     arrQRCode.map((id, index) => (
                       <Box key={index} border="1px solid black" p="20px" width="20rem">
                         <Text>Event: {id.eventName}</Text>
-                        <Text>RandomHash: {id.RandomHash}</Text>
-                        <QRCode value="{id.RandomHash}" />
+                        <Text>Your Personal Entry Key: {id.RandomHash}</Text>
+                        <Text>Data sent to Entry Management System Successfully</Text>
                       </Box>
                     ))
                   }
@@ -543,7 +593,37 @@ function App() {
               </div>
             </TabPanel>
             <TabPanel>
-              <h1 className="text-center" pb="30px">Entry Gate</h1>
+            
+             <Stack width="600px" align="center" justify="center">
+                <Heading mb="25px">Entry Gate</Heading>
+                  <form onSubmit={(e) => {
+                      e.preventDefault()
+                      verifyTicketQRCode(e)
+                    }}>
+                    
+                    <Input
+                      isRequired
+                      id='nameverify'
+                      type='text'
+                      size="md"
+                      className="form-control form-control-md mb-2"
+                      placeholder='Event name'
+                      onChange={(e) => setFormEventName(e.target.value)}
+                      w="450px"
+                    />
+                    <input
+                      id='verifyTicketQRCode'
+                      type='number'
+                      size="md"
+                      className="form-control form-control-md mb-2"
+                      placeholder='Enter QR Code Value'
+                      onChange={(e) => setQrCodeValue(e.target.value)}
+                      w="450px"
+                    />
+                  <button type='submit' className='btn btn-primary mb-4'>Verify</button>
+                </form>
+                <Text>Verification Result: {verificationResult}</Text>
+                </Stack>
             </TabPanel>
           </TabPanels>
         </Tabs>
