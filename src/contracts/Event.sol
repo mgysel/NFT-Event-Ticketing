@@ -105,7 +105,7 @@ contract Event is ERC721 {
     event WithdrawMoney(address receiver, uint money);
     event OwnerWithdrawMoney(address owner, uint money);
     event TicketUsed(string sQRCodeKey);
-    event  StageChangeTo(stage);
+    event StageChangeTo(Stages stage);
 
     // Creates a new Event Contract
     constructor(address _owner, uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
@@ -153,7 +153,7 @@ contract Event is ERC721 {
         }
         balances[owner] = price;
         // Mint NFT
-        _safemint(msg.sender, ticketID);
+        _safeMint(msg.sender, ticketID);
         emit CreateTicket(msg.sender, ticketID);
 
         return ticketID;
@@ -164,32 +164,32 @@ contract Event is ERC721 {
      * @dev Only owner , only able to close in Stages.Cancelled or Stages.CheckinOpen
      */
     function setStageToClosed() public onlyOwner ableToClose returns (Stages) {
-        stage == Stage.Closed;
+        stage == Stages.Closed;
         emit StageChangeTo(stage);
         return stage;
     }
     
     function setStageToPause() public onlyOwner requiredStage(Stages.Active) returns (Stages) {
-        stage == Stage.Paused;
+        stage == Stages.Paused;
         emit StageChangeTo(stage);
         return stage;
     }
     
     function setStageToActive() public onlyOwner ableToActive returns (Stages) {
-        stage == Stage.Active;
+        stage == Stages.Active;
         emit StageChangeTo(stage);
         return stage;
     }
     
     function setStageToCheckinOpen() public onlyOwner ableToCheckinOpen returns (Stages) {
-        stage == Stage.CheckinOpen;
+        stage == Stages.CheckinOpen;
         emit StageChangeTo(stage);
         return stage;
     }
     
     function setStageToCancelled() public onlyOwner ableToCancelled returns (Stages) {
-        stage == Stage.Cancelled;
-        balances[owner] -= price * ticketCounter;
+        stage == Stages.Cancelled;
+        balances[owner] -= price * tickets.length;
         isCancelled = true;
         emit StageChangeTo(stage);
         return stage;
@@ -220,7 +220,7 @@ contract Event is ERC721 {
         tickets[ticketID].status = TicketStatus.Used;
 
         // Raise event which Gate Management system can consume then
-        emit TicketUsed(sQRCodeKey, ticketID);
+        emit TicketUsed(sQRCodeKey);
         
         return sQRCodeKey;
 	}
@@ -233,8 +233,8 @@ contract Event is ERC721 {
         uint ownerBalance = balances[owner];
         require(ownerBalance > 0, "No money to withdraw");
         
-        // Transfer money to owner
-        bool sent = owner.transfer(ownerBalance);
+        // Call will forwards all available gas
+        (bool sent, ) = msg.sender.call{value:ownerBalance}("");
         // Failure condition if cannot transfer
         require(sent, "Failed to send ether to owner");
         // Update balance after transfering money
@@ -253,8 +253,6 @@ contract Event is ERC721 {
         
         // If event cancelled, send user the amount they overpaid for ticket + ticket price refund
         if (isCancelled) {
-            // Update isUserRefunded before sending money
-            isUserRefunded[msg.sender] = true;
             sendToUser += balanceOf(msg.sender) * price;
         }
 
@@ -263,7 +261,8 @@ contract Event is ERC721 {
         
         // Transfer money to user
         address payable receiver = payable(msg.sender);
-        bool sent = receiver.transfer(sendToUser);
+        // Call will forwards all available gas
+        (bool sent, ) = receiver.call{value:sendToUser}("");
         // Failure condition of send will emit this error
         require(sent, "Failed to send ether to user");
         // Update balance after transfering money
