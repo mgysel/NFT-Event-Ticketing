@@ -398,7 +398,6 @@ function App() {
             </TabPanel>
             <TabPanel mt="15px" mb="15px" align="center">
               <Heading mb="25px">Purchase Tickets</Heading>
-              <h1 className="text-center" pb="30px">Purchase Tickets</h1>
               <SimpleGrid columns={4} spacing={10} mt="30px">
                 { 
                   eventData.map((id, index) => (
@@ -409,7 +408,7 @@ function App() {
                         p="20px" 
                         width="20rem"
                       >
-                        <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
+                        <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px"> Event {index + 1}</Text>
                         <Text>Name: {id.eventName}</Text>
                         <Text>Symbol: {id.eventSymbol}</Text>
                         <Text>Number of Tickets: {id.numTicketsLeft}</Text>
@@ -422,7 +421,7 @@ function App() {
                           color={darkGreen}
                           backgroundColor={lightGreen}
                           size="lg"
-                          mt="10px"
+                          mt="13px"
                           onClick={(e) => {
                             e.preventDefault()
                             buyTicket(e, index)
@@ -448,7 +447,7 @@ function App() {
                           p="20px" 
                           width="20rem"
                         >
-                          <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
+                          <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px"> Event {index + 1}</Text>
                           <Text>Event: {id.eventName}</Text>
                           <Text>Number of Tickets: {id.numTickets}</Text>
                           <form>
@@ -459,7 +458,8 @@ function App() {
                               size="md"
                               placeholder='Set Random Number'
                               onChange={(e) => setSRandomHash(e.target.value)}
-                              mb="10px"
+                              mb="0px"
+                              mt="10px"
                               _placeholder={{ color: 'gray.500' }}
                             />
                             <Button 
@@ -510,7 +510,7 @@ function App() {
                         p="20px" 
                         width="20rem"
                       >
-                        <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
+                        <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px"> Event {index + 1}</Text>
                         <Text>Event: {id.eventName}</Text>
                         <Text>Balance: {id.balance}</Text>
                         <Text>Number of Tickets Left: {id.numTicketsLeft}</Text>
@@ -522,7 +522,8 @@ function App() {
                             size="md"
                             placeholder='Set Random Number'
                             onChange={(e) => setEventStage(e.target.value)}
-                            mb="10px"
+                            mb="0px"
+                            mt="10px"
                             _placeholder={{ color: 'gray.500' }}
                           />
                           <Button 
