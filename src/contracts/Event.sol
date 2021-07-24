@@ -20,8 +20,9 @@ contract EventCreator {
      * @param _eventName Name of the Ticket NFT
      * @param _eventSymbol Symbol for the Ticket NFT Token
      */
-    function createEvent(uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent,
+    function createEvent(uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
             string memory _eventName, string memory _eventSymbol) external returns(address newEvent) {
+
         // Create a new Event smart contract
         // NOTE: 'new' keyword creates a new SC and returns address
         Event e = new Event(msg.sender, _numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol);
@@ -83,27 +84,40 @@ contract Event is ERC721 {
     uint32 public price;
     
     /// Percent royalty event creator receives from ticket resales
-    uint32 public royaltyPercent;
+    uint8 public royaltyPercent;
     
     // For each user, store corresponding ticket struct
     mapping(address => Ticket) public tickets;
     
     bool public canBeResold;
-    address public owner;
+    address payable public owner;
     
     // to store the balances for buyers and organizers
-    mapping(address => uint256) balances;
+    uint totalBalances = 0;
+    mapping(address => uint) public balances;
+    mapping(address => bool) public isUserRefunded;
 
     // EVENTS
     event CreateTicket(address buyer, uint ticketID);
-    event WithdrawalMoney(address receiver, uint money);
-    event Refund(address organizer, address receiver, uint money);
+    event WithdrawMoney(address receiver, uint money);
+    event OwnerWithdrawMoney(address owner, uint money);
     event TicketUsed(string eventName, string sQRCodeKey);
 
     // Creates a new Event Contract
-    constructor(address _owner, uint32 _numTickets, uint32 _price, bool _canBeResold, uint32 _royaltyPercent,
+    constructor(address _owner, uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
             string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
-        owner = _owner;
+        
+        // Check valid constructor arguments
+        require(_royaltyPercent >= 0 && _royaltyPercent <= 100, "Royalty Percentage must be between 0 and 100");
+        // Number of tickets must be greater than 0
+        require(_numTickets > 0, "The number of tickets must be greater than 0");
+        // EventName, EventSymbol cannot be empty string
+        bytes memory eventNameBytes = bytes(_eventName);
+        bytes memory eventSymbolBytes = bytes(_eventSymbol);
+        require(eventNameBytes.length != 0, "Event Name cannot be empty");
+        require(eventSymbolBytes.length != 0, "Event Symbol cannot be empty");
+        
+        owner = payable(_owner);
         numTicketsLeft = _numTickets;
         price = _price;
         canBeResold = _canBeResold;
@@ -134,6 +148,16 @@ contract Event is ERC721 {
         // Mint NFT
         _safeMint(msg.sender, ticketID);
         emit CreateTicket(msg.sender, ticketID);
+
+        // Store t in tickets mapping, reduce numTicketsLeft
+        tickets[msg.sender] = t;
+        numTicketsLeft--;
+
+        // If user overpaid, add difference to balances
+        if (msg.value > price) {
+            balances[msg.sender] = msg.value - price;
+            totalBalances += (msg.value - price);
+        }
         
         return ticketID;
     }
@@ -161,8 +185,8 @@ contract Event is ERC721 {
         _burn(ticket.ticketID);
         
         // Ticket is valid so mark it as used
-        ticket.status = TicketStatus.Used;
-        
+        tickets[msg.sender].status = TicketStatus.Used;
+
         // Raise event which Gate Management system can consume then
         emit TicketUsed(name(), sQRCodeKey);
         
@@ -170,28 +194,60 @@ contract Event is ERC721 {
 	}
 	
     /**
-     * @notice Refund money to buyers
-     * @dev once the event is cancelled, organizer should refund money to buyers
-     * @param receiver Receiver of the ether
-     * @param money Amount of ether to refund 
+     * @notice Allows owner to withdraw money
+     * @dev once the event is closed, owner can withdraw money from SC account
      */
-    function refund(address receiver, uint money) public onlyOwner returns (bool success){
-        require (money > 0);
-        require(balances[msg.sender] >= money, "Not enough money");
-        emit Refund(msg.sender, receiver, money);
-        balances[msg.sender] -= money;
-        balances[receiver] += money;
+    function ownerWithdraw() public onlyOwner requiredStage(Stages.Closed) returns (bool success){
+        // Make sure owner did not already withdraw
+        require(isUserRefunded[owner] == false, "Owner has already withdrawn money");
+        isUserRefunded[owner] = true;
+        
+        // Require smart contract balance - amount users overpaid > 0
+        // Otherwise, there is no money for owner to refund
+        uint sendToOwner = address(this).balance - totalBalances;
+        require(sendToOwner > 0, "No money in smart contract account");
+
+        // Transfer money to owner
+        bool sent = owner.send(sendToOwner);
+        // Failure condition if cannot transfer
+        require(sent, "Failed to send ether to owner");
+
+        emit OwnerWithdrawMoney(msg.sender, sendToOwner);
+
         return true;
     }
 
+    // TODO: DOES THIS NEED TO RETURN BOOLEAN? IF IT FAILS THERE WILL BE AN ERROR
     /**
-     * @notice For user and organizer to withdraw money from their account
-     * @param money Amount of ether to refund 
+     * @notice User to withdraw money 
+     * @dev User can withdraw money if event cancelled or overpaid for ticket
      */
-    function withdrawal(uint money) public returns (bool success){
-        require(balances[msg.sender] >= money, "Not enough money");
-        emit WithdrawalMoney(msg.sender, money);
-        balances[msg.sender] -= money;
+    function withdraw() public returns (bool success) {
+        // Amount user overpaid for ticket
+        uint sendToUser = balances[msg.sender];
+
+        // Update balance before sending money
+        balances[msg.sender] = 0;
+        totalBalances -= balances[msg.sender];
+        
+        // If event cancelled, send user the amount they overpaid for ticket + ticket price refund
+        if ((stage == Stages.Cancelled || stage == Stages.Paused) && isUserRefunded[msg.sender] == false) {
+            // Update isUserRefunded before sending money
+            isUserRefunded[msg.sender] = true;
+            sendToUser += price;
+        }
+
+        // Cannot withdraw if no money to withdraw
+        require(sendToUser > 0, "User does not have money to withdraw");
+
+        // Transfer money to user
+        address payable receiver = payable(msg.sender);
+        bool sent = receiver.send(sendToUser);
+        // Failure condition of send will emit this error
+        require(sent, "Failed to send ether to user");
+
+        emit WithdrawMoney(msg.sender, sendToUser);
+        
         return true;
     }
 
@@ -206,7 +262,7 @@ contract Event is ERC721 {
 
     // Requires stage to be _stage
     modifier requiredStage(Stages _stage) {
-        require(stage == _stage, "Event not in the correct stage for this action");
+        require(stage == _stage, "Cannot execute function at this stage");
         _;
     }
     
@@ -215,15 +271,15 @@ contract Event is ERC721 {
         require(stage == Stages.Active || stage == Stages.CheckinOpen, "Tickets are not open for sale");
         _;
     }
-    
+
     // Requires there to be more than 0 tickets left
     modifier ticketsLeft() {
-        require(numTicketsLeft > 0, "All tickets are sold");
+        require(numTicketsLeft > 0, "There are 0 tickets left");
         _;
     }
 
     modifier hasEnoughMoney(uint money) {
-        require(money >= price, "Transferred ether is not enough");
+        require(money >= price, "Not enough money to purchase a ticket");
         _;
     }
 
