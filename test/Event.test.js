@@ -465,6 +465,8 @@ contract('Event', (accounts) => {
             assert.equal(afterUser2.toString(), beforeUser2AddDiff.toString(), 'Buyer 2 withdraw should give user amount overpaid for ticket') 
         })
 
+        // TODO: withdraw multiple tickets
+
         it('event emitted when user withdraws money', async () => {
             const overpay = 100
             await event.buyTicket({ value: (_price + overpay), from: buyer1 })

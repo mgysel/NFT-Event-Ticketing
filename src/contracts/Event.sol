@@ -96,6 +96,7 @@ contract Event is ERC721 {
     uint totalBalances = 0;
     mapping(address => uint) public balances;
     mapping(address => bool) public isUserRefunded;
+    mapping(address => uint) public numTicketsBought;
 
     // EVENTS
     event CreateTicket(address buyer, uint ticketID);
@@ -151,6 +152,7 @@ contract Event is ERC721 {
 
         // Store t in tickets mapping, reduce numTicketsLeft
         tickets[msg.sender] = t;
+        numTicketsBought[msg.sender] = numTicketsBought[msg.sender] + 1;
         numTicketsLeft--;
 
         // If user overpaid, add difference to balances
@@ -234,7 +236,8 @@ contract Event is ERC721 {
         if ((stage == Stages.Cancelled || stage == Stages.Paused) && isUserRefunded[msg.sender] == false) {
             // Update isUserRefunded before sending money
             isUserRefunded[msg.sender] = true;
-            sendToUser += price;
+            sendToUser += (price * numTicketsBought[msg.sender]);
+            numTicketsBought[msg.sender] = 0;
         }
 
         // Cannot withdraw if no money to withdraw
