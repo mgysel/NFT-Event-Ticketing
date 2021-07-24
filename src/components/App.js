@@ -197,8 +197,6 @@ function App() {
   // Get user Tickets once eventData has been generated
   useEffect(() => {
     if (eventData !== null) {
-      
-  
       getUserTickets()
     }
   }, [eventData])
@@ -293,6 +291,15 @@ function App() {
     }
   }
 
+  // Allows user to mark ticket for sale
+  async function setTicketForSale(e, ticketID, eventNumber) {
+    try {
+      await eventContracts[eventNumber].methods.setTicketForSale(ticketID).send({ from: account })
+    } catch(e) {
+      console.log('Set ticket for sale: ', e)
+    }
+  }
+
   // Allows owner to withdraw from smart contract
   async function ownerWithdraw(e, eventNumber) {
     try {
@@ -378,6 +385,9 @@ function App() {
             </Tab>
             <Tab>
               My Events
+            </Tab>
+            <Tab>
+              Secondary Tickets
             </Tab>
             <Tab>
               Oracle
@@ -507,31 +517,72 @@ function App() {
                 <SimpleGrid columns={4} spacing={10} mt="30px">
                   { 
                     tickets.map((id, index) => (
-                        <Box key={index} border="1px solid black" p="20px" width="20rem">
-                          <Text isTruncated fontWeight="bold"> Event {index + 1}</Text>
+                        <Box 
+                          key={index} 
+                          borderRadius="5px"
+                          border="1px solid"
+                          borderColor="gray.200"
+                          p="20px" 
+                          width="20rem"
+                        >
+                          <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px"> Event {id.eventNumber + 1}</Text>
                           <Text>Event: {id.eventName}</Text>
-                          <Text>Number of Tickets: {id.numTickets}</Text>
-                          <form onSubmit={(e) => {
-                            e.preventDefault()
-                            setTicketToUsed(e, index)
-                          }}>
-                            <div className='form-group mr-sm-2'>
-                              <input
-                                id='eventStage'
-                                type='number'
-                                className="form-control form-control-md mb-2"
-                                placeholder='Set SRandomHash'
-                                onChange={(e) => setSRandomHash(e.target.value)}
-                              />
-                            </div>
-                            <button type='submit' className='btn btn-primary mb-4'>Checkin</button>
+                          <Text>ID: {id.ticketID}</Text>
+                          <form>
+                            <Input
+                              isRequired
+                              id='eventStage'
+                              type='number'
+                              size="md"
+                              placeholder='Set Random Number'
+                              onChange={(e) => setSRandomHash(e.target.value)}
+                              mb="0px"
+                              mt="10px"
+                              _placeholder={{ color: 'gray.500' }}
+                            />
+                            <Button 
+                              type='submit' 
+                              color={darkGreen}
+                              backgroundColor={lightGreen}
+                              size="lg"
+                              mt="10px"
+                              width="210px"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                setTicketToUsed(e, index)
+                              }}
+                            >
+                              Checkin
+                            </Button>
                           </form>
-                          <button className='btn btn-primary mb-4' onClick={(e) => {
-                            e.preventDefault()
-                            withdraw(e, index)
-                          }}>
-                              Withdraw
-                          </button>
+                          <Button 
+                            type='submit' 
+                            color={darkGreen}
+                            backgroundColor={lightGreen}
+                            size="lg"
+                            mt="10px"
+                            width="210px"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              setTicketForSale(e, id.ticketID, index)
+                            }}
+                          >
+                            Set Ticket For Sale
+                          </Button>
+                          <Button 
+                            type='submit' 
+                            color={darkGreen}
+                            backgroundColor={lightGreen}
+                            size="lg"
+                            mt="10px"
+                            width="210px"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              withdraw(e, index)
+                            }}
+                          >
+                            Withdraw Balance
+                          </Button>
                         </Box>
 
                     ))
