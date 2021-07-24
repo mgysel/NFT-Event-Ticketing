@@ -46,12 +46,13 @@ function App() {
   useEffect(() => {
     async function componentDidMount() {
       await loadEventCreator()
-
+      
       if (typeof window.ethereum !== 'undefined') {
         console.log('MetaMask is installed!');
       } else {
         window.alert('Non-Ethereum browser detected. Please install MetaMask!')
       }
+
     }
 
     componentDidMount()
@@ -142,11 +143,14 @@ function App() {
           console.log("Event Balance")
           console.log(i)
           console.log(bal['_hex']);
-          allTickets.push({
-            'eventNumber': i, 
-            'eventName': eventData[i]['eventName'],
-            'numTickets': bal['_hex']
-          })
+          let numTickets = parseInt(bal['_hex'])
+          if (numTickets > 0) {
+            allTickets.push({
+              'eventNumber': i, 
+              'eventName': eventData[i]['eventName'],
+              'numTickets': numTickets
+            })
+          }
         }
         setTickets(allTickets)
       }
