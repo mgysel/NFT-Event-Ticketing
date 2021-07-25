@@ -2,58 +2,58 @@
 pragma solidity 0.8.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
  
-/// @title Factory Contract to create events
-contract EventCreator {
+// /// @title Factory Contract to create events
+// contract EventCreator {
 
-    // Created events
-    Event[] public events;
+//     // Created events
+//     Event[] public events;
 
-    // EVENTS
-    event CreateEvent(address _creator, address _event);
+//     // EVENTS
+//     event CreateEvent(address _creator, address _event);
 
-    /**
-     * @notice Creates Events
-     * @param _numTickets Number of tickets 
-     * @param _price Price per ticket
-     * @param _canBeResold Are tickets allowed to be resold
-     * @param _royaltyPercent Royalty percentage accrued by organizers on reselling of ticket
-     * @param _eventName Name of the Ticket NFT
-     * @param _eventSymbol Symbol for the Ticket NFT Token
-     */
-    function createEvent(uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
-            string memory _eventName, string memory _eventSymbol) external returns(address newEvent) {
+//     /**
+//      * @notice Creates Events
+//      * @param _numTickets Number of tickets 
+//      * @param _price Price per ticket
+//      * @param _canBeResold Are tickets allowed to be resold
+//      * @param _royaltyPercent Royalty percentage accrued by organizers on reselling of ticket
+//      * @param _eventName Name of the Ticket NFT
+//      * @param _eventSymbol Symbol for the Ticket NFT Token
+//      */
+//     function createEvent(uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
+//             string memory _eventName, string memory _eventSymbol) external returns(address newEvent) {
 
-        // Create a new Event smart contract
-        // NOTE: 'new' keyword creates a new SC and returns address
-        Event e = new Event(msg.sender, _numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol);
+//         // Create a new Event smart contract
+//         // NOTE: 'new' keyword creates a new SC and returns address
+//         Event e = new Event(msg.sender, _numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol);
         
-        // Store/return event address
-        events.push(e);
-        address eventAddress = address(e);
-        emit CreateEvent(msg.sender, eventAddress);
+//         // Store/return event address
+//         events.push(e);
+//         address eventAddress = address(e);
+//         emit CreateEvent(msg.sender, eventAddress);
 
-        // QUESTION: I cannot return this because async??
-        return eventAddress;
-    }
+//         // QUESTION: I cannot return this because async??
+//         return eventAddress;
+//     }
 
 
-    /**
-     * @notice Retrieve number of events
-     */
-    function getEventCount() public view returns(uint contractCount) {
-        return events.length;
-    }
+//     /**
+//      * @notice Retrieve number of events
+//      */
+//     function getEventCount() public view returns(uint contractCount) {
+//         return events.length;
+//     }
 
-    // Returns array of all events
-    function getEvents() external view returns(Event[] memory _events) {
-        _events = new Event[] (events.length);
-        for (uint i=0; i<events.length; i++){
-            _events[i] = events[i];
-        }
+//     // Returns array of all events
+//     function getEvents() external view returns(Event[] memory _events) {
+//         _events = new Event[] (events.length);
+//         for (uint i=0; i<events.length; i++){
+//             _events[i] = events[i];
+//         }
 
-        return _events;
-    }  
-}
+//         return _events;
+//     }  
+// }
 
 /// @title Contract to mint tickets of an event
 contract Event is ERC721 {
@@ -65,8 +65,8 @@ contract Event is ERC721 {
     /// Cancelled - Event is cancelled. Money can be refunded to buyers
     /// Closed - Event is closed
     enum Stages { Prep, Active, Paused, CheckinOpen, Cancelled, Closed }
-    Stages public stage = Stages.Prep;
-    
+    // Stages public stage = Stages.Prep;
+    Stages public stage;
     /// Control Ticket Status at a granular level
     /// Valid - Ticket is Valid
     /// Used - Ticket is used
@@ -99,16 +99,18 @@ contract Event is ERC721 {
     
     // to store the balances for buyers and organizers
     mapping(address => uint) public balances;
+    // to store if user is refunded when the event is cancelled
+    mapping(address => bool) public isUserRefund;
 
     // EVENTS
     event CreateTicket(address buyer, uint ticketID);
     event WithdrawMoney(address receiver, uint money);
     event OwnerWithdrawMoney(address owner, uint money);
     event TicketUsed(string sQRCodeKey);
-    event StageChangeTo(Stages stage);
+    // event StageChangeTo(Stages stage);
 
     // Creates a new Event Contract
-    constructor(address _owner, uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
+    constructor(uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
             string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
             
         // Check valid constructor arguments
@@ -121,11 +123,12 @@ contract Event is ERC721 {
         require(eventNameBytes.length != 0, "Event Name cannot be empty");
         require(eventSymbolBytes.length != 0, "Event Symbol cannot be empty");
         
-        owner = payable(_owner);
+        owner = payable(msg.sender);
         numTicketsLeft = _numTickets;
         price = _price;
         canBeResold = _canBeResold;
         royaltyPercent = _royaltyPercent;
+        stage = Stages.Prep;
     }
 
     /**
@@ -151,7 +154,7 @@ contract Event is ERC721 {
             balances[msg.sender] += amount;
             
         }
-        balances[owner] = price;
+        balances[owner] += price;
         // Mint NFT
         _safeMint(msg.sender, ticketID);
         emit CreateTicket(msg.sender, ticketID);
@@ -159,52 +162,91 @@ contract Event is ERC721 {
         return ticketID;
     }
     
-    /**
-     * @notice Change Stage to closed
-     * @dev Only owner , only able to close in Stages.Cancelled or Stages.CheckinOpen
-     */
-    function setStageToClosed() public onlyOwner ableToClose returns (Stages) {
-        stage == Stages.Closed;
-        emit StageChangeTo(stage);
-        return stage;
-    }
+    // /**
+    //  * @notice Change Stage to closed
+    //  * @dev Only owner , only able to close in Stages.Cancelled or Stages.CheckinOpen
+    //  */
+    // function setStageToClosed() public view onlyOwner ableToClose returns (Stages) {
+    //     stage == Stages.Closed;
+    //     return stage;
+    // }
     
-    function setStageToPause() public onlyOwner requiredStage(Stages.Active) returns (Stages) {
-        stage == Stages.Paused;
-        emit StageChangeTo(stage);
-        return stage;
-    }
+    // function setStageToPause() public view onlyOwner requiredStage(Stages.Active) returns (Stages) {
+    //     stage == Stages.Paused;
+    //     return stage;
+    // }
     
-    function setStageToActive() public onlyOwner ableToActive returns (Stages) {
-        stage == Stages.Active;
-        emit StageChangeTo(stage);
-        return stage;
-    }
+    // function setStageToActive() public view onlyOwner ableToActive returns (Stages) {
+    //     stage == Stages.Active;
+    //     return stage;
+    // }
     
-    function setStageToCheckinOpen() public onlyOwner ableToCheckinOpen returns (Stages) {
-        stage == Stages.CheckinOpen;
-        emit StageChangeTo(stage);
-        return stage;
-    }
+    // function setStageToCheckinOpen() public view onlyOwner requiredStage(Stages.Active) returns (Stages) {
+    //     stage == Stages.CheckinOpen;
+    //     return stage;
+    // }
     
-    function setStageToCancelled() public onlyOwner ableToCancelled returns (Stages) {
-        stage == Stages.Cancelled;
-        balances[owner] -= price * tickets.length;
-        isCancelled = true;
-        emit StageChangeTo(stage);
-        return stage;
-    }
+    // function setStageToCancelled() public  onlyOwner ableToCancelled returns (Stages) {
+    //     stage == Stages.Cancelled;
+    //     isCancelled = true;
+    //     balances[owner] -= price * tickets.length;
+    //     return stage;
+    // }
+    
+    // function setStageNew(Stages _s) public onlyOwner returns (Stages) {
+    //     if (_s == Stages.Closed) {
+    //         require(stage == Stages.CheckinOpen || stage == Stages.Cancelled, "Need to in cancelled or checkinOpen stage");
+    //         stage == Stages.Closed;
+    //         emit StageChangeTo(stage);
+    //         return stage;
+    //     }
+        
+    //     if (_s == Stages.Cancelled) {
+    //         require(stage == Stages.Prep || stage == Stages.Paused, "Need to in active or paused stage");
+    //         stage == Stages.Cancelled;
+    //         isCancelled = true;
+    //         emit StageChangeTo(stage);
+    //         return stage;
+    //     }
+        
+    //     if (_s == Stages.Active) {
+    //         require(stage == Stages.Prep || stage == Stages.Paused, "Need to in prep or paused stage");
+    //         stage == Stages.Active;
+    //         emit StageChangeTo(stage);
+    //         return stage;
+    //     }
+        
+        
+    //     if (_s == Stages.Paused) {
+    //         require(stage == Stages.Active, "Need to in active stage");
+    //         stage == Stages.Paused;
+    //         emit StageChangeTo(stage);
+    //         return stage;
+    //     }
+        
+    //     if(_s == Stages.CheckinOpen) {
+    //         require(stage == Stages.Active, "Need to in active or paused stage");
+    //         stage == Stages.CheckinOpen;
+    //         emit StageChangeTo(stage);
+    //         return stage;
+    //     }
+        
+    //     return stage;
+    // }
     
     /** TODO set to Stage randomly will affect withdraw
      * @notice Change Status
      * @dev Only owner can change state
      * @param _stage Stages as set in enum Stages
      */
-    // function setStage(Stages _stage) public onlyOwner returns (Stages) {
-    //     stage = _stage;
-    //     emit StageChangeTo(stage);
-    //     return stage;
-    // }
+    function setStage(Stages _stage) public onlyOwner returns (Stages) {
+        stage = _stage;
+        if (stage == Stages.Cancelled) {
+            isCancelled = true;
+            balances[owner] -= price * tickets.length;
+        }
+        return stage;
+    }
     
     /**
      * @notice Mark ticket as used
@@ -238,7 +280,7 @@ contract Event is ERC721 {
         // Failure condition if cannot transfer
         require(sent, "Failed to send ether to owner");
         // Update balance after transfering money
-        balances[msg.sender] = 0;
+        balances[owner] = 0;
         emit OwnerWithdrawMoney(msg.sender, ownerBalance);
     }
 
@@ -252,7 +294,7 @@ contract Event is ERC721 {
         uint sendToUser = balances[msg.sender];
         
         // If event cancelled, send user the amount they overpaid for ticket + ticket price refund
-        if (isCancelled) {
+        if (isCancelled && isUserRefund[msg.sender] == false ) {
             sendToUser += balanceOf(msg.sender) * price;
         }
 
@@ -267,6 +309,7 @@ contract Event is ERC721 {
         require(sent, "Failed to send ether to user");
         // Update balance after transfering money
         balances[msg.sender] = 0;
+        isUserRefund[msg.sender] = true;
         emit WithdrawMoney(msg.sender, sendToUser);
         
     }
@@ -304,30 +347,24 @@ contract Event is ERC721 {
         _;
     }
     
-    // Requires stage condition to change to closed stage
-    modifier ableToClose() {
-        require(stage == Stages.CheckinOpen || stage == Stages.Cancelled, "Can only set stage from cancelled or checkinOpen");
-        _;
-    }
+    // // Requires stage condition to change to closed stage
+    // modifier ableToClose() {
+    //     require(stage == Stages.CheckinOpen || stage == Stages.Cancelled, "Can only set stage from cancelled or checkinOpen");
+    //     _;
+    // }
     
-    // Requires stage condition to change to active stage
-    modifier ableToActive() {
-        require(stage == Stages.Prep || stage == Stages.Paused, "Can only set stage from Prep or Paused");
-        _;
-    }
+    // // Requires stage condition to change to active stage
+    // modifier ableToActive() {
+    //     require(stage == Stages.Prep || stage == Stages.Paused, "Can only set stage from Prep or Paused");
+    //     _;
+    // }
     
-    // Requires stage condition to change to checkinOpen stage
-    modifier ableToCheckinOpen() {
-        require(stage == Stages.Paused || stage == Stages.Active, "Can only set stage from Active or Paused");
-        _;
-    }
     
-    // Requires stage condition to change to cancelled stage
-    modifier ableToCancelled() {
-        require(stage == Stages.Active || stage == Stages.Paused, "Can only set stage from cancelled or checkinOpen");
-        _;
-    }
-    
+    // // Requires stage condition to change to cancelled stage
+    // modifier ableToCancelled() {
+    //     require(stage == Stages.Prep || stage == Stages.Paused, "Can only set stage from cancelled or checkinOpen");
+    //     _;
+    // }
     
     
     
