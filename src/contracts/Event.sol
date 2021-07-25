@@ -90,7 +90,7 @@ contract Event is ERC721 {
     mapping(address => uint) public numTicketsBought;
 
     // EVENTS
-    event CreateTicket(address buyer, uint ticketID);
+    event CreateTicket(address contractAddress, string eventName, address buyer, uint ticketID);
     event WithdrawMoney(address receiver, uint money);
     event OwnerWithdrawMoney(address owner, uint money);
     event TicketForSale(address seller, uint ticketID);
@@ -123,8 +123,6 @@ contract Event is ERC721 {
      */
     function buyTicket() public payable buyingTicketOpen ticketsLeft 
                                             hasEnoughMoney(msg.value) returns (uint){
-        //uint32 ticketID = numTicketsLeft;
-
         // Create Ticket t
         Ticket memory t;
         t.price = price;
@@ -139,7 +137,7 @@ contract Event is ERC721 {
 
         // Mint NFT
         _safeMint(msg.sender, ticketID);
-        emit CreateTicket(msg.sender, ticketID);
+        emit CreateTicket(address(this), name(), msg.sender, ticketID);
 
         // If user overpaid, add difference to balances
         if (msg.value > price) {

@@ -27,8 +27,136 @@ client = MongoClient(connection_string)
 
 
 ########## EVENT ROUTES ##########
-@APP.route('/event/add', methods=['POST'])
-def event_add():
+@APP.route('/ticket/add', methods=['POST'])
+def newticket_add():
+    '''
+    Given a smart contract ID, event name, venue, ticket price
+    Adds event to database
+    '''
+    data = request.get_json()
+    fields = ['contractAddress', 'eventName', 'userAddress',  'ticketId']
+    for field in fields:
+        if not field in data:
+            return make_response(
+                dumps(
+                    {"message": "No eventName, userAddress or ticketId parameters."}
+                ), 
+                400
+            ) 
+
+    contract_Address = data['contractAddress']
+    event_name = data['eventName']
+    user_Address = data['userAddress']
+    ticket_Id = data['ticketId']
+    print(event_name)
+    print(user_Address)
+    print(ticket_Id)
+    
+    code_json = {
+        'contract_Address': contract_Address,
+        'event_name': event_name,
+        'user_Address': user_Address,
+        'ticket_Id': ticket_Id
+    }
+
+    db = client['project']
+    coll = db['NewTicket']
+    coll.insert_one(code_json)
+
+    return make_response(
+        dumps(
+            {
+                "result": "success",
+            }
+        ), 
+        201
+    ) 
+
+@APP.route('/ticket/delete', methods=['POST'])
+def newticket_delete():
+    '''
+    Given a smart contract ID, event name, venue, ticket price
+    Adds event to database
+    '''
+    data = request.get_json()
+    fields = ['eventName', 'userAddress',  'ticketId']
+    for field in fields:
+        if not field in data:
+            return make_response(
+                dumps(
+                    {"message": "No eventName, userAddress or ticketId parameters."}
+                ), 
+                400
+            ) 
+
+    event_name = data['eventName']
+    user_Address = data['userAddress']
+    ticket_Id = data['ticketId']
+    print(event_name)
+    print(user_Address)
+    print(ticket_Id)
+    
+    code_json = {
+        'event_name': event_name,
+        'user_Address': user_Address,
+        'ticket_Id': ticket_Id
+    }
+
+    db = client['project']
+    coll = db['NewTicket']
+    coll.remove(code_json)
+
+    return make_response(
+        dumps(
+            {
+                "result": "success",
+            }
+        ), 
+        200
+    ) 
+
+@APP.route('/ticket/query', methods=['GET'])
+def newticket_get():
+    '''
+    Returns tickets for a user
+    '''
+    # Get eventName and useraddress, 400 eror if parameters not in args
+    event_name = request.args.get('eventName')
+    user_Address = request.args.get('userAddress')
+    if user_Address is None:    
+        return make_response(
+        dumps(
+            {"message": "user_Address."}
+        ), 
+        400
+    ) 
+
+    # Get all events 
+    db = client['project']
+    coll = db['NewTicket']
+    #coll.remove()
+    code_json = coll.find({ 'user_Address': user_Address })
+    list_cursor = list(code_json)
+    
+    arrOutput = []
+    for oRec in list_cursor:
+        arrOutput.append({'contractAddress': oRec['contract_Address'],
+                            'eventName': oRec['event_name'],
+                            'userAddress': oRec['user_Address'],
+                            'ticketID': oRec['ticket_Id']})
+    print("Array Output", arrOutput)
+    return make_response(
+        dumps(arrOutput), 
+        200
+    ) 
+    
+    
+############################
+#QR Code Functionality start
+############################
+    
+@APP.route('/usedticket/add', methods=['POST'])
+def usedticket_add():
     '''
     Given a smart contract ID, event name, venue, ticket price
     Adds event to database
@@ -54,7 +182,7 @@ def event_add():
     }
 
     db = client['project']
-    coll = db['events']
+    coll = db['UsedTicket']
     coll.insert_one(code_json)
 
     return make_response(
@@ -67,10 +195,8 @@ def event_add():
     ) 
 
 
-
-
-@APP.route('/event/query', methods=['GET'])
-def event_get():
+@APP.route('/usedticket/query', methods=['GET'])
+def usedticket_get():
     '''
     Returns True if QR Code is valid, false otherwise
     '''
@@ -87,7 +213,7 @@ def event_get():
 
     # Get all events 
     db = client['project']
-    coll = db['events']
+    coll = db['UsedTicket']
     code_json = coll.find_one({ 'event_name': event_name, 'qr_code': qr_code })
 
     if code_json:

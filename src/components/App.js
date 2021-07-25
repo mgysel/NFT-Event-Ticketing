@@ -33,6 +33,7 @@ import EventCreator from '../abis/EventCreator.json'
 // This function detects most providers injected at window.ethereum
 // import detectEthereumProvider from '@metamask/detect-provider';
 var QRCode = require('qrcode.react');
+var ether_port = 'ws://localhost:8545';
 
 
 function App() {
@@ -60,6 +61,7 @@ function App() {
   const [qrCodeValue, setQrCodeValue] = useState(0);
   const [verificationResult, setVerificationResult] = useState("");
 
+  const oContractsMap = {};
   // Styling
   const lightGreen = "#C6F6DF";
   const darkGreen = "#276749";
@@ -123,7 +125,6 @@ function App() {
   useEffect(() => {
     if (eventAddresses !== null) {
       async function createEventContracts() {
-        var ether_port = 'ws://localhost:8545';
         var web3Subscription = new Web3(new Web3.providers.WebsocketProvider(ether_port));
         // Create event contract from each event address, store in eventContracts
         // Get event data from each event contract, store in eventData
@@ -133,10 +134,53 @@ function App() {
           // Create event contract from event abi, address
           const thisEventContract = new web3.eth.Contract(Event.abi, eventAddresses[i])
           allEventContracts.push(thisEventContract)
+          oContractsMap[eventAddresses[i]] = thisEventContract;
+          console.log("Event Contract Map: ");
+          console.log(oContractsMap);
           
           var oEventContract = new web3Subscription.eth.Contract(Event.abi, eventAddresses[i])
+          // Register Blockchain Events
+          // Trap CreateTicket event
+          oEventContract.events.CreateTicket().on("connected", function () {
+            console.log("listening on event CreateTicket");
+            })
+            .on("data", (event) => {
+                console.log("event fired: " + JSON.stringify(event.returnValues)); 
+                
+                const requestOptions = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({contractAddress: event.returnValues.contractAddress,
+                        eventName: event.returnValues.eventName,
+                        userAddress: event.returnValues.buyer,
+                        ticketId: event.returnValues.ticketID.toString()})
+                };
+                fetch(backendServer + "/ticket/add", requestOptions)
+                      .then(res => res.json())
+                      .then(
+                        (result) => {
+                            console.log(result);
+                            if(result.result === "success") {
+                                getUserTickets();
+                            }
+                        },
+                        // Note: it's important to handle errors here
+                        // instead of a catch() block so that we don't swallow
+                        // exceptions from actual bugs in components.
+                        (error) => {
+                          console.error(error);
+                        }
+                      );
+            })
+            .on("error", function (error: any, receipt: any) {
+                console.log(error);
+                console.log(receipt);
+                console.log("error listening on event CreateTicket");
+            });
+            
+            // TicketUsed Event
           oEventContract.events.TicketUsed().on("connected", function () {
-            console.log("listening on event temperatureRequest");
+            console.log("listening on event TicketUsed");
             })
             .on("data", (event) => {
                 console.log("event fired: " + JSON.stringify(event.returnValues)); 
@@ -147,7 +191,7 @@ function App() {
                     body: JSON.stringify({eventName: event.returnValues.eventName, 
                         qrCode: event.returnValues.sQRCodeKey})
                 };
-                fetch(backendServer + "/event/add", requestOptions)
+                fetch(backendServer + "/usedticket/add", requestOptions)
                       .then(res => res.json())
                       .then(
                         (result) => {
@@ -223,26 +267,30 @@ function App() {
     }
   }, [eventData])
 
-  async function getUserTickets() {
+    async function getUserTickets() {
         // Get user tickets for each event
-        console.log("TICKET BALANCES")
-        var allTickets = []
-        for (var i = 0; i < eventContracts.length; i++) {
-          let bal = await eventContracts[i].methods.balanceOf(account).call()
-          console.log("Event Balance")
-          console.log(i)
-          console.log(bal['_hex']);
-          let numTickets = parseInt(bal['_hex'])
-          if (numTickets > 0) {
-            allTickets.push({
-              'eventNumber': i, 
-              'eventName': eventData[i]['eventName'],
-              'numTickets': numTickets
-            })
-          }
+        
+        if(account) {
+            fetch(backendServer + "/ticket/query?" + new URLSearchParams({
+                userAddress: account
+            }))
+            .then(res => res.json())
+            .then(
+                (result) => {
+                    console.log("Tickets Result");
+                    console.log(result);
+                    setTickets(result);
+                    
+                },
+                // Note: it's important to handle errors here
+                // instead of a catch() block so that we don't swallow
+                // exceptions from actual bugs in components.
+                (error) => {
+                  console.error(error);
+                }
+            );
         }
-        setTickets(allTickets)
-      }
+    }
       
   // Allows user to create an event
   async function createEvent(e) {
@@ -319,7 +367,7 @@ function App() {
   }
   
   async function verifyTicketQRCode(e) {
-      fetch(backendServer + "/event/query?" + new URLSearchParams({
+      fetch(backendServer + "/usedticket/query?" + new URLSearchParams({
             eventName: formEventName,
             qrCode: qrCodeValue,
         }))
@@ -525,9 +573,9 @@ function App() {
                           p="20px" 
                           width="20rem"
                         >
-                          <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px"> Event {id.eventNumber + 1}</Text>
+                          <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px">Ticket {id.ticketID}</Text>
                           <Text>Event: {id.eventName}</Text>
-                          <Text>ID: {id.ticketID}</Text>
+                          <Text>Ticket ID: {id.ticketID}</Text>
                           <form>
                             <Input
                               isRequired
