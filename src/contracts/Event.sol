@@ -266,40 +266,40 @@ contract Event is ERC721 {
         return true;
     }
 
-    // /**
-    //  * @dev approve a buyer to buy ticket of another user
-    //  */
-    // function approveAsBuyer(address buyer, uint ticketID) public requiredStage(Stages.Active) ownsTicket(ticketID) {
-    //     approve(buyer, ticketID);
-    // }
+    /**
+     * @dev approve a buyer to buy ticket of another user
+     */
+    function approveAsBuyer(address buyer, uint ticketID) public requiredStage(Stages.Active) ownsTicket(ticketID) {
+        approve(buyer, ticketID);
+    }
 
-    // /**
-    //  * @notice Mark ticket as used
-    //  * @dev Only a valid buyer can mark ticket as used
-    //  * @param ticketID ticket ID of ticket
-    //  */
-    // function buyTicketFromUser(uint ticketID) public payable requiredStage(Stages.Active) hasEnoughMoney(msg.value) returns (bool) {
-    //     // Check if ticket is available for sale
-    //     require(tickets[ticketID].status == TicketStatus.AvailableForSale, "Ticket not available for sale");
+    /**
+     * @notice Mark ticket as used
+     * @dev Only a valid buyer can mark ticket as used
+     * @param ticketID ticket ID of ticket
+     */
+    function buyTicketFromUser(uint ticketID) public payable requiredStage(Stages.Active) hasEnoughMoney(msg.value) returns (bool) {
+        // Check if ticket is available for sale
+        require(tickets[ticketID].status == TicketStatus.AvailableForSale, "Ticket not available for sale");
 
-    //     //calc amount to pay after royalty
-    //     uint ticketPrice = tickets[ticketID].price;
-    //     uint royalty = (royaltyPercent/100) * ticketPrice;
-    //     uint priceToPay = ticketPrice - royalty;
+        //calc amount to pay after royalty
+        uint ticketPrice = tickets[ticketID].price;
+        uint royalty = (royaltyPercent/100) * ticketPrice;
+        uint priceToPay = ticketPrice - royalty;
 
-    //     //transfer money to seller
-    //     address payable seller = payable(ownerOf(ticketID));
-    //     seller.transfer(priceToPay);
-    //     bool sent = seller.send(price);
+        //transfer money to seller
+        address payable seller = payable(ownerOf(ticketID));
+        seller.transfer(priceToPay);
+        bool sent = seller.send(price);
 
-    //     require(sent, "Failed to send ether to user");
+        require(sent, "Failed to send ether to user");
 
-    //     emit TicketSold(seller, msg.sender, ticketID);
-    //     safeTransferFrom(seller, msg.sender, ticketID);
+        emit TicketSold(seller, msg.sender, ticketID);
+        safeTransferFrom(seller, msg.sender, ticketID);
 
-    //     return true;
+        return true;
 
-    // }
+    }
 
 
     // MODIFIERS
