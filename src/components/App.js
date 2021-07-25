@@ -524,7 +524,7 @@ function App() {
             </TabPanel>
             <TabPanel mt="15px" mb="15px" align="center">
               <div div className="content mr-auto ml-auto">
-                <h1 className="text-center" pb="30px">My Tickets</h1>
+                <Heading mb="25px">My Tickets</Heading>
                 <SimpleGrid columns={4} spacing={10} mt="30px">
                   { 
                     tickets.map((id, index) => (
