@@ -101,11 +101,8 @@ def event_get():
                 "result": result,
             }
         ), 
-        201
+        200
     ) 
-
-
-
 
 if __name__ == "__main__":
     APP.run(port=(int(sys.argv[1]) if len(sys.argv) == 2 else 2122), debug=True)
