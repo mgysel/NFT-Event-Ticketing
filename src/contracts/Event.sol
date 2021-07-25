@@ -2,58 +2,58 @@
 pragma solidity 0.8.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
  
-// /// @title Factory Contract to create events
-// contract EventCreator {
+/// @title Factory Contract to create events
+contract EventCreator {
 
-//     // Created events
-//     Event[] public events;
+    // Created events
+    Event[] public events;
 
-//     // EVENTS
-//     event CreateEvent(address _creator, address _event);
+    // EVENTS
+    event CreateEvent(address _creator, address _event);
 
-//     /**
-//      * @notice Creates Events
-//      * @param _numTickets Number of tickets 
-//      * @param _price Price per ticket
-//      * @param _canBeResold Are tickets allowed to be resold
-//      * @param _royaltyPercent Royalty percentage accrued by organizers on reselling of ticket
-//      * @param _eventName Name of the Ticket NFT
-//      * @param _eventSymbol Symbol for the Ticket NFT Token
-//      */
-//     function createEvent(uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
-//             string memory _eventName, string memory _eventSymbol) external returns(address newEvent) {
+    /**
+     * @notice Creates Events
+     * @param _numTickets Number of tickets 
+     * @param _price Price per ticket
+     * @param _canBeResold Are tickets allowed to be resold
+     * @param _royaltyPercent Royalty percentage accrued by organizers on reselling of ticket
+     * @param _eventName Name of the Ticket NFT
+     * @param _eventSymbol Symbol for the Ticket NFT Token
+     */
+    function createEvent(uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
+            string memory _eventName, string memory _eventSymbol) external returns(address newEvent) {
 
-//         // Create a new Event smart contract
-//         // NOTE: 'new' keyword creates a new SC and returns address
-//         Event e = new Event(msg.sender, _numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol);
+        // Create a new Event smart contract
+        // NOTE: 'new' keyword creates a new SC and returns address
+        Event e = new Event(msg.sender, _numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol);
         
-//         // Store/return event address
-//         events.push(e);
-//         address eventAddress = address(e);
-//         emit CreateEvent(msg.sender, eventAddress);
+        // Store/return event address
+        events.push(e);
+        address eventAddress = address(e);
+        emit CreateEvent(msg.sender, eventAddress);
 
-//         // QUESTION: I cannot return this because async??
-//         return eventAddress;
-//     }
+        // QUESTION: I cannot return this because async??
+        return eventAddress;
+    }
 
 
-//     /**
-//      * @notice Retrieve number of events
-//      */
-//     function getEventCount() public view returns(uint contractCount) {
-//         return events.length;
-//     }
+    /**
+     * @notice Retrieve number of events
+     */
+    function getEventCount() public view returns(uint contractCount) {
+        return events.length;
+    }
 
-//     // Returns array of all events
-//     function getEvents() external view returns(Event[] memory _events) {
-//         _events = new Event[] (events.length);
-//         for (uint i=0; i<events.length; i++){
-//             _events[i] = events[i];
-//         }
+    // Returns array of all events
+    function getEvents() external view returns(Event[] memory _events) {
+        _events = new Event[] (events.length);
+        for (uint i=0; i<events.length; i++){
+            _events[i] = events[i];
+        }
 
-//         return _events;
-//     }  
-// }
+        return _events;
+    }  
+}
 
 /// @title Contract to mint tickets of an event
 contract Event is ERC721 {

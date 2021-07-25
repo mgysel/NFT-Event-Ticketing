@@ -339,6 +339,7 @@ contract('Event', (accounts) => {
             await event.setTicketToUsed(ticketID, sQRCodeKey, { from: buyer1 })
             await event.setTicketForSale(ticketID, { from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
         })
+    })
 
     describe('Buy Ticket from User', async () => {
         it('checking cannot buy ticket from user unless stage active', async () => {
@@ -411,7 +412,8 @@ contract('Event', (accounts) => {
             assert.equal(bal, 1, "Buyer 2 should have 1 NFT after buying ticket from buyer1")
         })
     })
-describe('user withdraw if event is not cancelled', async () => {
+    
+    describe('user withdraw if event is not cancelled', async () => {
 
         beforeEach(async () => {
             // Set stage to active
