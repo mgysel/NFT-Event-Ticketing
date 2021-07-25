@@ -95,7 +95,7 @@ contract Event is ERC721 {
     event OwnerWithdrawMoney(address owner, uint money);
     event TicketForSale(address seller, uint ticketID);
     event TicketSold(address seller, address buyer, uint ticketID);
-    event TicketUsed(string eventName, string sQRCodeKey);
+    event TicketUsed(address contractAddress, uint ticketID, string eventName, string sQRCodeKey);
 
     // Creates a new Event Contract
     constructor(address _owner, uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
@@ -176,7 +176,7 @@ contract Event is ERC721 {
         _burn(ticketID); 
         
         // Raise event which Gate Management system can consume then
-        emit TicketUsed(name(), sQRCodeKey);
+        emit TicketUsed(address(this), ticketID, name(), sQRCodeKey);
         
         return sQRCodeKey;
 	}

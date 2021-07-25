@@ -34,7 +34,7 @@ import EventCreator from '../abis/EventCreator.json'
 // import detectEthereumProvider from '@metamask/detect-provider';
 var QRCode = require('qrcode.react');
 var ether_port = 'ws://localhost:8545';
-
+var oContractsMap = {};
 
 function App() {
   const [web3, setWeb3] = useState("undefined");
@@ -61,7 +61,6 @@ function App() {
   const [qrCodeValue, setQrCodeValue] = useState(0);
   const [verificationResult, setVerificationResult] = useState("");
 
-  const oContractsMap = {};
   // Styling
   const lightGreen = "#C6F6DF";
   const darkGreen = "#276749";
@@ -135,9 +134,7 @@ function App() {
           const thisEventContract = new web3.eth.Contract(Event.abi, eventAddresses[i])
           allEventContracts.push(thisEventContract)
           oContractsMap[eventAddresses[i]] = thisEventContract;
-          console.log("Event Contract Map: ");
-          console.log(oContractsMap);
-          
+
           var oEventContract = new web3Subscription.eth.Contract(Event.abi, eventAddresses[i])
           // Register Blockchain Events
           // Trap CreateTicket event
@@ -188,16 +185,20 @@ function App() {
                 const requestOptions = {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({eventName: event.returnValues.eventName, 
-                        qrCode: event.returnValues.sQRCodeKey})
+                    body: JSON.stringify({
+                                        userAddress: account,
+                                        contractAddress: event.returnValues.contractAddress,
+                                        ticketId: event.returnValues.ticketID.toString(),
+                                        eventName: event.returnValues.eventName, 
+                                        qrCode: event.returnValues.sQRCodeKey})
                 };
                 fetch(backendServer + "/usedticket/add", requestOptions)
                       .then(res => res.json())
                       .then(
                         (result) => {
                             console.log(result);
-                             setArrQRCode([{eventName: event.returnValues.eventName, 
-                                RandomHash: event.returnValues.sQRCodeKey}]);
+                            getUsedTickets();
+                            getUserTickets();
                         },
                         // Note: it's important to handle errors here
                         // instead of a catch() block so that we don't swallow
@@ -241,7 +242,8 @@ function App() {
   // Get user Tickets once eventData has been generated
   useEffect(() => {
     if (eventData !== null) {
-      getUserTickets()
+      getUserTickets();
+      getUsedTickets();
     }
   }, [eventData])
 
@@ -267,6 +269,31 @@ function App() {
     }
   }, [eventData])
 
+    async function getUsedTickets() {
+        // Get used tickets for each event
+        
+        if(account) {
+            fetch(backendServer + "/usedticket/query?" + new URLSearchParams({
+                userAddress: account
+            }))
+            .then(res => res.json())
+            .then(
+                (result) => {
+                    console.log("Used Tickets Result");
+                    console.log(result);
+                    setArrQRCode(result);
+                    
+                },
+                // Note: it's important to handle errors here
+                // instead of a catch() block so that we don't swallow
+                // exceptions from actual bugs in components.
+                (error) => {
+                  console.error(error);
+                }
+            );
+        }
+    }
+    
     async function getUserTickets() {
         // Get user tickets for each event
         
@@ -330,10 +357,14 @@ function App() {
   }
 
   // Allows user to mark ticket as used
-  async function setTicketToUsed(e, eventNumber) {
+  async function setTicketToUsed(e, ticketIndex) {
     try {
-      await eventContracts[eventNumber].methods.setTicketToUsed(sRandomHash).send({ from: account });
-      loadEventCreator();
+        var oTicket = tickets[ticketIndex];
+        var oContract = oContractsMap[oTicket.contractAddress];
+        if(oContract) {
+            await oContract.methods
+                .setTicketToUsed(oTicket.ticketID, sRandomHash).send({ from: account });
+        }
     } catch(e) {
       console.log('Set ticket to used: ', e)
     }
@@ -370,6 +401,7 @@ function App() {
       fetch(backendServer + "/usedticket/query?" + new URLSearchParams({
             eventName: formEventName,
             qrCode: qrCodeValue,
+            userAddress: account
         }))
       .then(res => res.json())
       .then(
@@ -573,7 +605,7 @@ function App() {
                           p="20px" 
                           width="20rem"
                         >
-                          <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px">Ticket {id.ticketID}</Text>
+                          <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px">Ticket for Event {id.eventName}</Text>
                           <Text>Event: {id.eventName}</Text>
                           <Text>Ticket ID: {id.ticketID}</Text>
                           <form>
@@ -687,7 +719,7 @@ function App() {
                     arrQRCode.map((id, index) => (
                       <Box key={index} border="1px solid black" p="20px" width="20rem">
                         <Text>Event: {id.eventName}</Text>
-                        <Text>Your Personal Entry Key: {id.RandomHash}</Text>
+                        <Text>Your Personal Entry Key: {id.qrCode}</Text>
                         <Text>Data sent to Entry Management System Successfully</Text>
                       </Box>
                     ))
