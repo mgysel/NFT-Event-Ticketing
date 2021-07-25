@@ -72,6 +72,7 @@ contract Event is ERC721 {
     }
     Ticket[] public tickets;
     uint32 public numTicketsLeft;
+    uint32 public totalTickets;
     uint32 public price;
     
     /// Percent royalty event creator receives from ticket resales
@@ -111,6 +112,7 @@ contract Event is ERC721 {
         require(eventSymbolBytes.length != 0, "Event Symbol cannot be empty");
         
         owner = payable(_owner);
+        totalTickets = _numTickets;
         numTicketsLeft = _numTickets;
         price = _price;
         canBeResold = _canBeResold;
@@ -188,7 +190,7 @@ contract Event is ERC721 {
      * @dev Only a valid buyer can mark ticket as used
      * @param ticketID ticket ID of ticket
      */
-    function setTicketForSale(uint ticketID) public requiredStage(Stages.Active) ownsTicket(ticketID) {
+    function setTicketForSale(uint ticketID) public requiredStage(Stages.Active) ownsTicket(ticketID) returns(bool) {
 		// Validate that user has a ticket they own and it is valid
         require(tickets[ticketID].status != TicketStatus.Used, "Ticket has already been used");
         
@@ -199,6 +201,7 @@ contract Event is ERC721 {
         emit TicketForSale(msg.sender, ticketID);
         
         //return ticketID;
+        return true;
 	}
 
      /**
@@ -208,6 +211,21 @@ contract Event is ERC721 {
         return tickets[ticketID].status;
     }
 
+    /**
+     * @dev get ticket by ID
+     */
+    function getTicket(uint ticketID) public view returns(uint32 price, uint32 resalePrice, TicketStatus status) {
+        price = tickets[ticketID].price;
+        resalePrice = tickets[ticketID].resalePrice;
+        status = tickets[ticketID].status;
+    }
+
+    /**
+     * @dev get all tickets 
+     */
+    function getTicketsCreated() public view returns(Ticket [] memory){
+        return tickets;
+    }
 	
     /**
      * @notice Allows owner to withdraw money
@@ -269,7 +287,8 @@ contract Event is ERC721 {
     /**
      * @dev approve a buyer to buy ticket of another user
      */
-    function approveAsBuyer(address buyer, uint ticketID) public requiredStage(Stages.Active) ownsTicket(ticketID) {
+    function approveAsBuyer(address buyer, uint ticketID) public requiredStage(Stages.Active){
+        //setApprovalForAll(buyer, bool(true));
         approve(buyer, ticketID);
     }
 
@@ -289,7 +308,7 @@ contract Event is ERC721 {
 
         //transfer money to seller
         address payable seller = payable(ownerOf(ticketID));
-        seller.transfer(priceToPay);
+        //seller.transfer(priceToPay);
         bool sent = seller.send(price);
 
         require(sent, "Failed to send ether to user");

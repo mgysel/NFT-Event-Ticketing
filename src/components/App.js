@@ -38,12 +38,15 @@ function App() {
   const [web3, setWeb3] = useState("undefined");
   const [account, setAccount] = useState("");
   const [balance, setBalance] = useState("");
+  const [sellers, setSellers] = useState("");
   const [netId, setNetId] = useState("");
   const [eventCreator, setEventCreator] = useState("");
   const [eventContracts, setEventContracts] = useState([]);
   const [eventAddresses, setEventAddresses] = useState([]);
   const [eventData, setEventData] = useState([]);
   const [tickets, setTickets] = useState([]);
+  const [secondaryTickets, setSecondaryTickets] = useState([]);
+  const [allEventTickets, setAllEventTickets] = useState([]);
   const [myEvents, setMyEvents] = useState([]);
 
   const [formEventName, setFormEventName] = useState("");
@@ -161,6 +164,7 @@ function App() {
           thisEventData['price'] = await thisEventContract.methods.price().call()
           thisEventData['canBeResold'] = await thisEventContract.methods.canBeResold().call()
           thisEventData['royaltyPercent'] = await thisEventContract.methods.royaltyPercent().call()
+          thisEventData['secondaryTickets'] = []
           console.log("THIS EVENT DATA")
           console.log(thisEventData)
           allEventData.push(thisEventData)
@@ -186,23 +190,80 @@ function App() {
           let bal = await eventContracts[i].methods.balanceOf(account).call()
           console.log("Event Balance")
           console.log(i)
-          console.log(bal['_hex']);
+          console.log(bal);
           let numTickets = parseInt(bal['_hex'])
           if (numTickets > 0) {
             for(var j = 0; j < numTickets; j++){
+              let t = await eventContracts[i].methods.getTicketsCreated().call()
               allTickets.push({
                 'eventNumber': i, 
                 'eventName': eventData[i]['eventName'],
-                'ticketID': j
+                'ticketID': t.length - 1,
+                'status': t['status']
               })
             }
           }
+          console.log(eventData[i].secondaryTickets)
         }
+        console.log(allTickets)
+        
         setTickets(allTickets)
       }
-  
+
       getUserTickets()
+
+      
     }
+  }, [eventData])
+
+  // async function getSecondaryTickets(e, eventNumber){
+  //   console.log("Enters secondary")
+  //   for(var i = 0; i < eventContracts.length; i++){
+  //     console.log(eventData[i].secondaryTickets)
+  //   }
+  //   setSecondaryTickets(eventData[eventNumber].secondaryTickets)
+  // }
+
+  
+
+  useEffect(() => {
+    if(eventData !== null) {
+      async function getSecondaryTickets() {
+        // Get user tickets for each event
+        console.log("Secondary Tickets")
+        var secTickets = []
+        //console.log(eventData)
+        //eventData['secondaryTickets'] = []
+        for (var i = 0; i < eventContracts.length; i++) {
+          let t = await eventContracts[i].methods.getTicketsCreated().call()
+          for(var j = 0; j < t.length; j++){
+            //check if available for sale
+            if(t[j].status == 3){
+              let o = await eventContracts[i].methods.ownerOf(j).call()
+              console.log(o)
+              secTickets.push({
+                'eventNumber': i, 
+                'eventName': eventData[i]['eventName'],
+                'ticketID': j,
+                'status': t[j].status,
+                'owner': o
+              })
+            }
+          }
+          
+        }
+        console.log(secTickets);
+        
+        // console.log(eventData['secondaryTickets']);
+        setSecondaryTickets(secTickets)
+        
+      }
+
+      getSecondaryTickets()
+    }
+
+    
+
   }, [eventData])
 
   useEffect(() => {
@@ -253,12 +314,27 @@ function App() {
     }
   }
 
+
   // Allows user to purchase ticket
   async function buyTicket(e, eventNumber) {
     const amount = eventData[eventNumber]['price']
     try {
       await eventContracts[eventNumber].methods.buyTicket().send({ value: amount, from: account })
       loadEventCreator()
+    } catch(e) {
+      console.log('Buy Ticket Error: ', e)
+    }
+  }
+
+  async function buyTicketFromUser(e, seller, ticketID, eventNumber) {
+    const amount = eventData[eventNumber]['price']
+    try {
+      console.log(seller)
+      console.log(await eventContracts[eventNumber].methods.ownerOf(ticketID).call())
+      console.log(account)
+      await eventContracts[eventNumber].methods.approveAsBuyer(account, ticketID).send({ from: seller })
+      //await eventContracts[eventNumber].methods.buyTicketFromUser(ticketID).send({ value: amount, from: account})
+      //loadEventCreator()
     } catch(e) {
       console.log('Buy Ticket Error: ', e)
     }
@@ -273,14 +349,24 @@ function App() {
     }
   }
 
+  async function checkTicket(ticketID, eventNumber) {
+    let t = await eventContracts[eventNumber].methods.getTicket(ticketID).call()
+    console.log(t);
+  }
+
   // Allows user to mark ticket for sale
   async function setTicketForSale(e, ticketID, eventNumber) {
     try {
+      console.log("enters ticket for sale")
+      console.log(eventNumber);
       await eventContracts[eventNumber].methods.setTicketForSale(ticketID).send({ from: account })
+      checkTicket(ticketID, eventNumber)
     } catch(e) {
       console.log('Set ticket for sale: ', e)
     }
   }
+
+  
 
   // Allows owner to withdraw from smart contract
   async function ownerWithdraw(e, eventNumber) {
@@ -527,7 +613,7 @@ function App() {
                             width="210px"
                             onClick={(e) => {
                               e.preventDefault()
-                              setTicketForSale(e, id.ticketID, index)
+                              setTicketForSale(e, id.ticketID, id.eventNumber)
                             }}
                           >
                             Set Ticket For Sale
@@ -611,6 +697,42 @@ function App() {
                             Owner Withdraw
                           </Button>
                       </Box>
+                    ))
+                  }
+                </SimpleGrid>
+            </TabPanel>
+            <TabPanel mt="15px" mb="15px" align="center">
+                <Heading mb="25px">Secondary Tickets</Heading>
+                <SimpleGrid columns={4} spacing={10} mt="30px">
+                  { 
+                    secondaryTickets.map((id, index) => (
+                        <Box 
+                          key={index} 
+                          borderRadius="5px"
+                          border="1px solid"
+                          borderColor="gray.200"
+                          p="20px" 
+                          width="20rem"
+                        >
+                          <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px"> Event {id.eventNumber + 1}</Text>
+                          <Text>Event: {id.eventName}</Text>
+                          <Text>ID: {id.ticketID}</Text>
+                          <Text>Owner: {id.owner}</Text>
+                          <Button 
+                          type='submit' 
+                          color={darkGreen}
+                          backgroundColor={lightGreen}
+                          size="lg"
+                          mt="13px"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            buyTicketFromUser(e, id.owner, id.ticketID, id.eventNumber)
+                          }}
+                          >
+                              Buy Ticket From Owner
+                          </Button>
+                        </Box>
+
                     ))
                   }
                 </SimpleGrid>
