@@ -629,7 +629,11 @@ function App() {
               </div>
             </TabPanel>
             <TabPanel>
+                <h1 className="text-center" pb="30px">Secondary Tickets</h1>
+            </TabPanel>
+            <TabPanel>
               <div div className="content mr-auto ml-auto">
+                <h1 className="text-center" pb="30px">Oracle</h1>
                 <SimpleGrid columns={4} spacing={10} mt="30px">
                   { 
                     arrQRCode.map((id, index) => (
