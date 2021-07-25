@@ -523,7 +523,6 @@ function App() {
               </SimpleGrid>
             </TabPanel>
             <TabPanel mt="15px" mb="15px" align="center">
-              <div div className="content mr-auto ml-auto">
                 <Heading mb="25px">My Tickets</Heading>
                 <SimpleGrid columns={4} spacing={10} mt="30px">
                   { 
@@ -599,7 +598,6 @@ function App() {
                     ))
                   }
                 </SimpleGrid>
-              </div>
             </TabPanel>
             <TabPanel mt="15px" mb="15px" align="center">
                 <Heading mb="25px">My Events</Heading>
