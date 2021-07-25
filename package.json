@@ -37,6 +37,8 @@
     "not op_mini all"
   ],
   "devDependencies": {
+    "@babel/register": "^7.14.5",
+    "@chakra-ui/color-mode": "^1.1.10",
     "@chakra-ui/react": "^1.6.5",
     "@emotion/react": "^11.4.0",
     "@emotion/styled": "^11.3.0",

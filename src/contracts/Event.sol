@@ -58,12 +58,6 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 /// @title Contract to mint tickets of an event
 contract Event is ERC721 {
     /// Control Event Status at a granular level
-    /// Prep - Allows administrator to maintain event
-    /// Active - Buying tickets allowed
-    /// Paused - Buying tickets not allowed
-    /// CheckinOpen - Buyer can checkin to attend the event
-    /// Cancelled - Event is cancelled. Money can be refunded to buyers
-    /// Closed - Event is closed
     enum Stages { Prep, Active, Paused, CheckinOpen, Cancelled, Closed }
     // Stages public stage = Stages.Prep;
     Stages public stage;
@@ -79,6 +73,7 @@ contract Event is ERC721 {
         uint32 resalePrice;
         TicketStatus status;
     }
+    Ticket[] public tickets;
     uint32 public numTicketsLeft;
     uint32 public price;
     
@@ -86,7 +81,7 @@ contract Event is ERC721 {
     uint8 public royaltyPercent;
     
     // For each user, store corresponding ticket struct
-    Ticket[] public tickets;
+    //mapping(address => Ticket) public tickets;
     
     // if ticket can be resold in the second market
     bool public canBeResold;
@@ -98,21 +93,23 @@ contract Event is ERC721 {
     address payable public owner;
     
     // to store the balances for buyers and organizers
+    uint totalBalances = 0;
     mapping(address => uint) public balances;
     // to store if user is refunded when the event is cancelled
     mapping(address => bool) public isUserRefund;
 
+
     // EVENTS
-    event CreateTicket(address buyer, uint ticketID);
+    event CreateTicket(address contractAddress, string eventName, address buyer, uint ticketID);
     event WithdrawMoney(address receiver, uint money);
     event OwnerWithdrawMoney(address owner, uint money);
-    event TicketUsed(string sQRCodeKey);
-    // event StageChangeTo(Stages stage);
+    event TicketForSale(address seller, uint ticketID);
+    event TicketSold(address seller, address buyer, uint ticketID);
+    event TicketUsed(address contractAddress, uint ticketID, string eventName, string sQRCodeKey);
 
     // Creates a new Event Contract
-    constructor(uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
-            string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {
-            
+    constructor(address _owner, uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
+            string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {    
         // Check valid constructor arguments
         require(_royaltyPercent >= 0 && _royaltyPercent <= 100, "Royalty Percentage must be between 0 and 100");
         // Number of tickets must be greater than 0
@@ -123,7 +120,7 @@ contract Event is ERC721 {
         require(eventNameBytes.length != 0, "Event Name cannot be empty");
         require(eventSymbolBytes.length != 0, "Event Symbol cannot be empty");
         
-        owner = payable(msg.sender);
+        owner = payable(_owner);
         numTicketsLeft = _numTickets;
         price = _price;
         canBeResold = _canBeResold;
@@ -152,13 +149,12 @@ contract Event is ERC721 {
         if (msg.value > price) {
             uint amount = msg.value - price;
             balances[msg.sender] += amount;
-            
         }
         balances[owner] += price;
         // Mint NFT
         _safeMint(msg.sender, ticketID);
-        emit CreateTicket(msg.sender, ticketID);
-
+        emit CreateTicket(address(this), name(), msg.sender, ticketID);
+        
         return ticketID;
     }
     
@@ -253,21 +249,50 @@ contract Event is ERC721 {
      * @dev Only a valid buyer can mark ticket as used
      * @param sQRCodeKey QR Code key sent by the app 
      */
-    function setTicketToUsed( uint ticketID, string memory sQRCodeKey) public requiredStage(Stages.CheckinOpen)
-                                                                    returns (string memory){
+    function setTicketToUsed(uint ticketID, string memory sQRCodeKey) public requiredStage(Stages.CheckinOpen)
+                                                                    ownsTicket(ticketID) returns (string memory){
 		// Validate that user has a ticket they own and it is valid
-        require (tickets[ticketID].status == TicketStatus.Valid, "There is no valid ticket for this user");
-
+        require(tickets[ticketID].status == TicketStatus.Valid, "There is no valid ticket for this user");
+    
         // Ticket is valid so mark it as used
         tickets[ticketID].status = TicketStatus.Used;
 
+        // Burn the Token
+        _burn(ticketID); 
+        
         // Raise event which Gate Management system can consume then
-        emit TicketUsed(sQRCodeKey);
+        emit TicketUsed(address(this), ticketID, name(), sQRCodeKey);
         
         return sQRCodeKey;
 	}
-	
+
     /**
+     * @notice Mark ticket as used
+     * @dev Only a valid buyer can mark ticket as used
+     * @param ticketID ticket ID of ticket
+     */
+    function setTicketForSale(uint ticketID) public requiredStage(Stages.Active) ownsTicket(ticketID) {
+		// Validate that user has a ticket they own and it is valid
+        require(tickets[ticketID].status != TicketStatus.Used, "Ticket has already been used");
+        
+        // Ticket is valid so mark it as used
+        tickets[ticketID].status = TicketStatus.AvailableForSale;
+        
+        // Raise event which Gate Management system can consume then
+        emit TicketForSale(msg.sender, ticketID);
+        
+        //return ticketID;
+	}
+
+     /**
+     * @dev get ticket status
+     */
+    function getTicketStatus(uint ticketID) public view returns (TicketStatus) {
+        return tickets[ticketID].status;
+    }
+
+	
+   /**
      * @notice owner can only withdraw what's in the balances
      * @dev once the event is cancelled, organizer should refund money to buyers
      */
@@ -314,6 +339,41 @@ contract Event is ERC721 {
         
     }
 
+    /**
+     * @dev approve a buyer to buy ticket of another user
+     */
+    function approveAsBuyer(address buyer, uint ticketID) public requiredStage(Stages.Active) ownsTicket(ticketID) {
+        approve(buyer, ticketID);
+    }
+
+    /**
+     * @notice Mark ticket as used
+     * @dev Only a valid buyer can mark ticket as used
+     * @param ticketID ticket ID of ticket
+     */
+    function buyTicketFromUser(uint ticketID) public payable requiredStage(Stages.Active) hasEnoughMoney(msg.value) returns (bool) {
+        // Check if ticket is available for sale
+        require(tickets[ticketID].status == TicketStatus.AvailableForSale, "Ticket not available for sale");
+
+        //calc amount to pay after royalty
+        uint ticketPrice = tickets[ticketID].price;
+        uint royalty = (royaltyPercent/100) * ticketPrice;
+        uint priceToPay = ticketPrice - royalty;
+
+        //transfer money to seller
+        address payable seller = payable(ownerOf(ticketID));
+        seller.transfer(priceToPay);
+        bool sent = seller.send(price);
+
+        require(sent, "Failed to send ether to user");
+
+        emit TicketSold(seller, msg.sender, ticketID);
+        safeTransferFrom(seller, msg.sender, ticketID);
+
+        return true;
+
+    }
+
 
     // MODIFIERS
 
@@ -331,7 +391,7 @@ contract Event is ERC721 {
     
     // Check if buying is open
     modifier buyingTicketOpen() {
-        require(stage == Stages.Active || stage == Stages.CheckinOpen, "Cannot buy ticket at this stage");
+        require(stage == Stages.Active || stage == Stages.CheckinOpen, "Tickets are not open for sale");
         _;
     }
 
@@ -341,9 +401,14 @@ contract Event is ERC721 {
         _;
     }
 
-    // Requires user to have enough money to purchase ticket
     modifier hasEnoughMoney(uint money) {
         require(money >= price, "Not enough money to purchase a ticket");
+        _;
+    }
+
+    // Check if user is ticket owner
+    modifier ownsTicket(uint ticketID) {
+        require(ownerOf(ticketID) == msg.sender, "User does not own this ticket");
         _;
     }
     

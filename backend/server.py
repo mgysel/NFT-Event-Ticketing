@@ -1,6 +1,6 @@
 from flask import Flask, request, redirect, url_for
-from flask_mail import Mail, Message
 from flask_cors import CORS
+from werkzeug.security import generate_password_hash, check_password_hash
 from bson.objectid import ObjectId
 # imports for PyJWT authentication
 import jwt
@@ -20,79 +20,203 @@ CORS(APP)
 APP.config['SECRET_KEY'] = 'your secret key'
 
 # Connect to MongoDB
-client = MongoClient("mongodb+srv://Pramith:pramith123@cluster0.fv4q5.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
-print("Connection Successfull");
-db = client.get_database('test')
+connection_string = "mongodb+srv://comp4337:comp4337@cluster0.mzbuz.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
+client = MongoClient(connection_string)
+
+
 
 ########## EVENT ROUTES ##########
-
-@APP.route('/event/add', methods=['POST'])
-def event_add():
+@APP.route('/ticket/add', methods=['POST'])
+def newticket_add():
     '''
     Given a smart contract ID, event name, venue, ticket price
     Adds event to database
     '''
     data = request.get_json()
-    # result = add_event(data, APP.secret_key)
-    return
+    fields = ['contractAddress', 'eventName', 'userAddress',  'ticketId']
+    for field in fields:
+        if not field in data:
+            return make_response(
+                dumps(
+                    {"message": "No contractAddress, eventName, userAddress or ticketId parameters."}
+                ), 
+                400
+            ) 
 
-@APP.route('/event/<event_id>', methods=['GET'])
-def event_get():
+    contract_Address = data['contractAddress']
+    event_name = data['eventName']
+    user_Address = data['userAddress']
+    ticket_Id = data['ticketId']
+    print(event_name)
+    print(user_Address)
+    print(ticket_Id)
+    
+    code_json = {
+        'contract_Address': contract_Address,
+        'event_name': event_name,
+        'user_Address': user_Address,
+        'ticket_Id': ticket_Id
+    }
+
+    db = client['project']
+    coll = db['NewTicket']
+    coll.insert_one(code_json)
+
+    return make_response(
+        dumps(
+            {
+                "result": "success",
+            }
+        ), 
+        201
+    ) 
+
+@APP.route('/ticket/query', methods=['GET'])
+def newticket_get():
     '''
-    Returns an event given an event ID
+    Returns tickets for a user
+    '''
+    # Get eventName and useraddress, 400 eror if parameters not in args
+    event_name = request.args.get('eventName')
+    user_Address = request.args.get('userAddress')
+    if user_Address is None:    
+        return make_response(
+        dumps(
+            {"message": "user_Address."}
+        ), 
+        400
+    ) 
+
+    # Get all events 
+    db = client['project']
+    #coll = db['UsedTicket']
+    #coll.remove()
+    coll = db['NewTicket']
+    #coll.remove()
+    code_json = coll.find({ 'user_Address': user_Address })
+    list_cursor = list(code_json)
+    
+    arrOutput = []
+    for oRec in list_cursor:
+        arrOutput.append({'contractAddress': oRec['contract_Address'],
+                            'eventName': oRec['event_name'],
+                            'userAddress': oRec['user_Address'],
+                            'ticketID': oRec['ticket_Id']})
+    print("Array Output", arrOutput)
+    return make_response(
+        dumps(arrOutput), 
+        200
+    ) 
+    
+    
+############################
+#QR Code Functionality start
+############################
+    
+@APP.route('/usedticket/add', methods=['POST'])
+def usedticket_add():
+    '''
+    Given a smart contract ID, event name, venue, ticket price
+    Adds event to database
     '''
     data = request.get_json()
-    # result = get_event(data, APP.secret_key)
-    return
+    print(data)
+    fields = ['userAddress','contractAddress', 'ticketId', 'eventName', 'qrCode']
+    for field in fields:
+        if not field in data:
+            return make_response(
+                dumps(
+                    {"message": "No contractAddress, ticketId, eventName or qrCode parameters."}
+                ), 
+                400
+            )
+    user_Address = data['userAddress']
+    contract_Address = data['contractAddress']
+    ticket_Id = data['ticketId']
+    event_name = data['eventName']
+    qr_code = data['qrCode']
+    print(qr_code)
+    
+    code_json = {
+        'user_Address': user_Address,
+        'event_name': event_name,
+        'qr_code': qr_code
+    }
+
+    db = client['project']
+    coll = db['UsedTicket']
+    coll.insert_one(code_json)
+    
+    # Remove the record from the other table
+    code_json = {
+        'contract_Address': contract_Address,
+        'ticket_Id': ticket_Id
+    }
+    coll = db['NewTicket']
+    coll.remove(code_json)
+
+    return make_response(
+        dumps(
+            {
+                "result": "success",
+            }
+        ), 
+        201
+    ) 
 
 
-
-
-########## TICKET ROUTES ##########
-
-@APP.route('/ticket/add', methods=['POST'])
-def event_get():
+@APP.route('/usedticket/query', methods=['GET'])
+def usedticket_get():
     '''
-    Given a ticketID and userID
-    Adds ticket to database
+    Returns True if QR Code is valid, false otherwise
     '''
-    data = request.get_json()
-    # result = add_ticket(data, APP.secret_key)
-    return
+    # Get eventName and qrCode, 400 eror if parameters not in args
+    user_Address = request.args.get('userAddress')
+    event_name = request.args.get('eventName')
+    qr_code = request.args.get('qrCode')
+    
+     # Get all events 
+    db = client['project']
+    coll = db['UsedTicket']
+    if request.args.get('userAddress') is None:
+        return make_response(
+                dumps(
+                    {"message": "No userAddress parameters."}
+                ), 
+                400
+            )
 
-@APP.route('/tickets/<user_id>', methods=['GET'])
-def event_get():
-    '''
-    Given a ticketID and userID
-    Adds ticket to database
-    '''
-    data = request.get_json()
-    # result = get_ticket(data, APP.secret_key)
-    return
+    if request.args.get('eventName') is None and request.args.get('qrCode') is None:
+        code_json = coll.find({ 'user_Address': user_Address })
+        list_cursor = list(code_json)
+        print(list_cursor)
+        arrOutput = []
+        for oRec in list_cursor:
+            arrOutput.append({'eventName': oRec['event_name'],
+                                'qrCode': oRec['qr_code'],
+                                'userAddress': oRec['user_Address']})
+        print("Array Output", arrOutput)
+        return make_response(
+            dumps(arrOutput), 
+            200
+        )
 
-
-
-
-########## AUTH ROUTES ##########
-
-@APP.route('/auth/register', methods=['POST'])
-def register_user():
-    '''
-    Registers a user
-    '''
-    data = request.get_json()
-    # result = auth_register(data, APP.secret_key)
-    return 
-
-@APP.route('/auth/login', methods=['POST'])
-def login_user():
-    '''
-    Logs in a user
-    '''
-    data = request.get_json()
-    # result = auth_login(data, APP.secret_key)
-    return 
-
+    else:
+        code_json = coll.find_one({ 'event_name': event_name, 'qr_code': qr_code,
+                                    'user_Address': user_Address})
+        if code_json:
+            result = True
+        else:
+            result = False
+    
+        return make_response(
+            dumps(
+                {
+                    "result": result,
+                }
+            ), 
+            200
+        ) 
 
 if __name__ == "__main__":
-    APP.run(port=(int(sys.argv[1]) if len(sys.argv) == 2 else 2119), debug=True)
+    APP.run(port=(int(sys.argv[1]) if len(sys.argv) == 2 else 2122), debug=True)
