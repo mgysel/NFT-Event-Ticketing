@@ -168,7 +168,7 @@
                             }
                           );
                 })
-                .on("error", function (error: any, receipt: any) {
+                .on("error", function (error, receipt) {
                     console.log(error);
                     console.log(receipt);
                     console.log("error listening on event CreateTicket");
@@ -207,7 +207,7 @@
                             }
                           );
                 })
-                .on("error", function (error: any, receipt: any) {
+                .on("error", function (error, receipt) {
                     console.log(error);
                     console.log(receipt);
                     console.log("error listening on event TicketUsed");
