@@ -59,10 +59,13 @@ contract EventCreator {
 contract Event is ERC721 {
     /// Control Event Status at a granular level
     enum Stages { Prep, Active, Paused, CheckinOpen, Cancelled, Closed }
-    Stages public stage = Stages.Prep;
-    
+    // Stages public stage = Stages.Prep;
+    Stages public stage;
     /// Control Ticket Status at a granular level
-    enum TicketStatus { Invalid, Valid, Used, AvailableForSale }
+    /// Valid - Ticket is Valid
+    /// Used - Ticket is used
+    /// AvailableForSale - Ticket is allowed to be sold to someone
+    enum TicketStatus {Valid, Used, AvailableForSale }
     
     // Ticket struct 
     struct Ticket {
@@ -81,7 +84,13 @@ contract Event is ERC721 {
     // For each user, store corresponding ticket struct
     //mapping(address => Ticket) public tickets;
     
+    // if ticket can be resold in the second market
     bool public canBeResold;
+    
+    // if event is cancelled
+    bool public isCancelled;
+    
+    // orginizer of event
     address payable public owner;
     
     // to store the balances for buyers and organizers
@@ -92,12 +101,12 @@ contract Event is ERC721 {
     mapping(uint => address) public registeredBuyers;
 
     // EVENTS
-    event CreateTicket(address buyer, uint ticketID);
+    event CreateTicket(address contractAddress, string eventName, address buyer, uint ticketID);
     event WithdrawMoney(address receiver, uint money);
     event OwnerWithdrawMoney(address owner, uint money);
     event TicketForSale(address seller, uint ticketID);
     event TicketSold(address seller, address buyer, uint ticketID);
-    event TicketUsed(string eventName, string sQRCodeKey);
+    event TicketUsed(address contractAddress, uint ticketID, string eventName, string sQRCodeKey);
 
     // Creates a new Event Contract
     constructor(address _owner, uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
@@ -118,6 +127,7 @@ contract Event is ERC721 {
         price = _price;
         canBeResold = _canBeResold;
         royaltyPercent = _royaltyPercent;
+        stage = Stages.Prep;
     }
 
     /**
@@ -126,40 +136,113 @@ contract Event is ERC721 {
      */
     function buyTicket() public payable buyingTicketOpen ticketsLeft 
                                             hasEnoughMoney(msg.value) returns (uint){
-        //uint32 ticketID = numTicketsLeft;
-
         // Create Ticket t
         Ticket memory t;
         t.price = price;
         t.resalePrice = price;
         t.status = TicketStatus.Valid;
 
-
         // Store t in tickets array
         tickets.push(t);
         uint ticketID = tickets.length - 1;
         numTicketsLeft--;
-
+        
+        // store overpaid in balances
+        if (msg.value > price) {
+            uint amount = msg.value - price;
+            balances[msg.sender] += amount;
+        }
+        balances[owner] += price;
         // Mint NFT
         _safeMint(msg.sender, ticketID);
-        emit CreateTicket(msg.sender, ticketID);
-
-        // If user overpaid, add difference to balances
-        if (msg.value > price) {
-            balances[msg.sender] = msg.value - price;
-            totalBalances += (msg.value - price);
-        }
+        emit CreateTicket(address(this), name(), msg.sender, ticketID);
         
         return ticketID;
     }
-
-    /**
+    
+    // /**
+    //  * @notice Change Stage to closed
+    //  * @dev Only owner , only able to close in Stages.Cancelled or Stages.CheckinOpen
+    //  */
+    // function setStageToClosed() public view onlyOwner ableToClose returns (Stages) {
+    //     stage == Stages.Closed;
+    //     return stage;
+    // }
+    
+    // function setStageToPause() public view onlyOwner requiredStage(Stages.Active) returns (Stages) {
+    //     stage == Stages.Paused;
+    //     return stage;
+    // }
+    
+    // function setStageToActive() public view onlyOwner ableToActive returns (Stages) {
+    //     stage == Stages.Active;
+    //     return stage;
+    // }
+    
+    // function setStageToCheckinOpen() public view onlyOwner requiredStage(Stages.Active) returns (Stages) {
+    //     stage == Stages.CheckinOpen;
+    //     return stage;
+    // }
+    
+    // function setStageToCancelled() public  onlyOwner ableToCancelled returns (Stages) {
+    //     stage == Stages.Cancelled;
+    //     isCancelled = true;
+    //     balances[owner] -= price * tickets.length;
+    //     return stage;
+    // }
+    
+    // function setStageNew(Stages _s) public onlyOwner returns (Stages) {
+    //     if (_s == Stages.Closed) {
+    //         require(stage == Stages.CheckinOpen || stage == Stages.Cancelled, "Need to in cancelled or checkinOpen stage");
+    //         stage == Stages.Closed;
+    //         emit StageChangeTo(stage);
+    //         return stage;
+    //     }
+        
+    //     if (_s == Stages.Cancelled) {
+    //         require(stage == Stages.Prep || stage == Stages.Paused, "Need to in active or paused stage");
+    //         stage == Stages.Cancelled;
+    //         isCancelled = true;
+    //         emit StageChangeTo(stage);
+    //         return stage;
+    //     }
+        
+    //     if (_s == Stages.Active) {
+    //         require(stage == Stages.Prep || stage == Stages.Paused, "Need to in prep or paused stage");
+    //         stage == Stages.Active;
+    //         emit StageChangeTo(stage);
+    //         return stage;
+    //     }
+        
+        
+    //     if (_s == Stages.Paused) {
+    //         require(stage == Stages.Active, "Need to in active stage");
+    //         stage == Stages.Paused;
+    //         emit StageChangeTo(stage);
+    //         return stage;
+    //     }
+        
+    //     if(_s == Stages.CheckinOpen) {
+    //         require(stage == Stages.Active, "Need to in active or paused stage");
+    //         stage == Stages.CheckinOpen;
+    //         emit StageChangeTo(stage);
+    //         return stage;
+    //     }
+        
+    //     return stage;
+    // }
+    
+    /** TODO set to Stage randomly will affect withdraw
      * @notice Change Status
      * @dev Only owner can change state
      * @param _stage Stages as set in enum Stages
      */
     function setStage(Stages _stage) public onlyOwner returns (Stages) {
         stage = _stage;
+        if (stage == Stages.Cancelled) {
+            isCancelled = true;
+            balances[owner] -= price * tickets.length;
+        }
         return stage;
     }
     
@@ -173,7 +256,6 @@ contract Event is ERC721 {
 		// Validate that user has a ticket they own and it is valid
         require(tickets[ticketID].status == TicketStatus.Valid, "There is no valid ticket for this user");
     
-        
         // Ticket is valid so mark it as used
         tickets[ticketID].status = TicketStatus.Used;
 
@@ -181,7 +263,7 @@ contract Event is ERC721 {
         _burn(ticketID); 
         
         // Raise event which Gate Management system can consume then
-        emit TicketUsed(name(), sQRCodeKey);
+        emit TicketUsed(address(this), ticketID, name(), sQRCodeKey);
         
         return sQRCodeKey;
 	}
@@ -228,61 +310,51 @@ contract Event is ERC721 {
         return tickets;
     }
 	
-    /**
-     * @notice Allows owner to withdraw money
-     * @dev once the event is closed, owner can withdraw money from SC account
+   /**
+     * @notice owner can only withdraw what's in the balances
+     * @dev once the event is cancelled, organizer should refund money to buyers
      */
-    function ownerWithdraw() public onlyOwner requiredStage(Stages.Closed) returns (bool success){
-        // Make sure owner did not already withdraw
-        require(isUserRefunded[owner] == false, "Owner has already withdrawn money");
-        isUserRefunded[owner] = true;
+    function ownerWithdraw() public onlyOwner requiredStage(Stages.Closed) {
+        uint ownerBalance = balances[owner];
+        require(ownerBalance > 0, "No money to withdraw");
         
-        // Require smart contract balance - amount users overpaid > 0
-        // Otherwise, there is no money for owner to refund
-        uint sendToOwner = address(this).balance - totalBalances;
-        require(sendToOwner > 0, "No money in smart contract account");
-
-        // Transfer money to owner
-        bool sent = owner.send(sendToOwner);
+        // Call will forwards all available gas
+        (bool sent, ) = msg.sender.call{value:ownerBalance}("");
         // Failure condition if cannot transfer
         require(sent, "Failed to send ether to owner");
-
-        emit OwnerWithdrawMoney(msg.sender, sendToOwner);
-
-        return true;
+        // Update balance after transfering money
+        balances[owner] = 0;
+        emit OwnerWithdrawMoney(msg.sender, ownerBalance);
     }
 
-    // TODO: DOES THIS NEED TO RETURN BOOLEAN? IF IT FAILS THERE WILL BE AN ERROR
     /**
      * @notice User to withdraw money 
      * @dev User can withdraw money if event cancelled or overpaid for ticket
      */
-    function withdraw() public returns (bool success) {
+    function withdraw() public {
+        require(msg.sender != owner, "Can not be executed by the owner");
         // Amount to send to user
         uint sendToUser = balances[msg.sender];
-
-        // Update balance before sending money
-        balances[msg.sender] = 0;
         
         // If event cancelled, send user the amount they overpaid for ticket + ticket price refund
-        if ((stage == Stages.Cancelled || stage == Stages.Paused) && isUserRefunded[msg.sender] == false) {
-            // Update isUserRefunded before sending money
-            isUserRefunded[msg.sender] = true;
-            sendToUser += price;
+        if (isCancelled && isUserRefund[msg.sender] == false ) {
+            sendToUser += balanceOf(msg.sender) * price;
         }
 
         // Cannot withdraw if no money to withdraw
         require(sendToUser > 0, "User does not have money to withdraw");
-
+        
         // Transfer money to user
         address payable receiver = payable(msg.sender);
-        bool sent = receiver.send(sendToUser);
+        // Call will forwards all available gas
+        (bool sent, ) = receiver.call{value:sendToUser}("");
         // Failure condition of send will emit this error
         require(sent, "Failed to send ether to user");
-
+        // Update balance after transfering money
+        balances[msg.sender] = 0;
+        isUserRefund[msg.sender] = true;
         emit WithdrawMoney(msg.sender, sendToUser);
         
-        return true;
     }
 
     /**
@@ -381,6 +453,27 @@ contract Event is ERC721 {
         require(ownerOf(ticketID) == msg.sender, "User does not own this ticket");
         _;
     }
+    
+    // // Requires stage condition to change to closed stage
+    // modifier ableToClose() {
+    //     require(stage == Stages.CheckinOpen || stage == Stages.Cancelled, "Can only set stage from cancelled or checkinOpen");
+    //     _;
+    // }
+    
+    // // Requires stage condition to change to active stage
+    // modifier ableToActive() {
+    //     require(stage == Stages.Prep || stage == Stages.Paused, "Can only set stage from Prep or Paused");
+    //     _;
+    // }
+    
+    
+    // // Requires stage condition to change to cancelled stage
+    // modifier ableToCancelled() {
+    //     require(stage == Stages.Prep || stage == Stages.Paused, "Can only set stage from cancelled or checkinOpen");
+    //     _;
+    // }
+    
+    
     
 }
 
