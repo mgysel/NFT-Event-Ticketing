@@ -46,6 +46,7 @@ function App() {
   const [eventData, setEventData] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [secondaryTickets, setSecondaryTickets] = useState([]);
+  const [isApproved, setIsApproved] = useState(true);
   const [allEventTickets, setAllEventTickets] = useState([]);
   const [myEvents, setMyEvents] = useState([]);
 
@@ -164,7 +165,6 @@ function App() {
           thisEventData['price'] = await thisEventContract.methods.price().call()
           thisEventData['canBeResold'] = await thisEventContract.methods.canBeResold().call()
           thisEventData['royaltyPercent'] = await thisEventContract.methods.royaltyPercent().call()
-          thisEventData['secondaryTickets'] = []
           console.log("THIS EVENT DATA")
           console.log(thisEventData)
           allEventData.push(thisEventData)
@@ -191,19 +191,21 @@ function App() {
           console.log("Event Balance")
           console.log(i)
           console.log(bal);
-          let numTickets = parseInt(bal['_hex'])
+          let t = await eventContracts[i].methods.getTicketsCreated().call()
+          let numTickets = t.length
           if (numTickets > 0) {
             for(var j = 0; j < numTickets; j++){
-              let t = await eventContracts[i].methods.getTicketsCreated().call()
-              allTickets.push({
-                'eventNumber': i, 
-                'eventName': eventData[i]['eventName'],
-                'ticketID': t.length - 1,
-                'status': t['status']
-              })
+              if(account == await eventContracts[i].methods.ownerOf(j).call()){
+                allTickets.push({
+                  'eventNumber': i, 
+                  'eventName': eventData[i]['eventName'],
+                  'ticketID': j,
+                  'status': t[j].status
+                })
+              }
+              
             }
           }
-          console.log(eventData[i].secondaryTickets)
         }
         console.log(allTickets)
         
@@ -236,11 +238,15 @@ function App() {
         //eventData['secondaryTickets'] = []
         for (var i = 0; i < eventContracts.length; i++) {
           let t = await eventContracts[i].methods.getTicketsCreated().call()
+          
           for(var j = 0; j < t.length; j++){
             //check if available for sale
+            let r = await eventContracts[i].methods.getRegisteredBuyer(j).call()
+            console.log(r)
             if(t[j].status == 3){
               let o = await eventContracts[i].methods.ownerOf(j).call()
               console.log(o)
+              console.log(isApproved)
               secTickets.push({
                 'eventNumber': i, 
                 'eventName': eventData[i]['eventName'],
@@ -326,14 +332,30 @@ function App() {
     }
   }
 
+  async function registerToBuy(e, ticketID, eventNumber) {
+    try {
+      await eventContracts[eventNumber].methods.registerAsBuyer(ticketID).send({ from: account })
+      let r = await eventContracts[eventNumber].methods.registeredBuyers().call()
+      console.log(r)
+    } catch (e) {
+      console.log('Register error: ', e)
+    }
+  }
+
+  async function approveSale(e, ticketID, eventNumber) {
+    const buyer = await eventContracts[eventNumber].methods.getRegisteredBuyer(ticketID).call()
+    try {
+      await eventContracts[eventNumber].methods.approveAsBuyer(buyer, ticketID).send({from: account})
+    } catch(e) {
+      console.log("Approval error: ", e)
+    }
+  }
+
   async function buyTicketFromUser(e, seller, ticketID, eventNumber) {
     const amount = eventData[eventNumber]['price']
     try {
-      console.log(seller)
-      console.log(await eventContracts[eventNumber].methods.ownerOf(ticketID).call())
-      console.log(account)
-      await eventContracts[eventNumber].methods.approveAsBuyer(account, ticketID).send({ from: seller })
-      //await eventContracts[eventNumber].methods.buyTicketFromUser(ticketID).send({ value: amount, from: account})
+      //await eventContracts[eventNumber].methods.approveAsBuyer(account, ticketID).call({ from: seller })
+      await eventContracts[eventNumber].methods.buyTicketFromUser(ticketID).send({ value: amount, from: account})
       //loadEventCreator()
     } catch(e) {
       console.log('Buy Ticket Error: ', e)
@@ -360,7 +382,7 @@ function App() {
       console.log("enters ticket for sale")
       console.log(eventNumber);
       await eventContracts[eventNumber].methods.setTicketForSale(ticketID).send({ from: account })
-      checkTicket(ticketID, eventNumber)
+      setIsApproved(false);
     } catch(e) {
       console.log('Set ticket for sale: ', e)
     }
@@ -718,6 +740,20 @@ function App() {
                           <Text>Event: {id.eventName}</Text>
                           <Text>ID: {id.ticketID}</Text>
                           <Text>Owner: {id.owner}</Text>
+                          <Text>isApproved: {id.isApproved} </Text>
+                          <Button 
+                          type='submit' 
+                          color={darkGreen}
+                          backgroundColor={lightGreen}
+                          size="lg"
+                          mt="13px"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            registerToBuy(e, id.ticketID, id.eventNumber)
+                          }}
+                          >
+                              Register To Buy
+                          </Button>
                           <Button 
                           type='submit' 
                           color={darkGreen}
@@ -730,6 +766,19 @@ function App() {
                           }}
                           >
                               Buy Ticket From Owner
+                          </Button>
+                          <Button 
+                          type='submit' 
+                          color={darkGreen}
+                          backgroundColor={lightGreen}
+                          size="lg"
+                          mt="13px"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            approveSale(e, id.ticketID, id.eventNumber)
+                          }}
+                          >
+                              Approve Sale
                           </Button>
                         </Box>
 

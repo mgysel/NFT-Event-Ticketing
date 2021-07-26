@@ -89,6 +89,7 @@ contract Event is ERC721 {
     mapping(address => uint) public balances;
     mapping(address => bool) public isUserRefunded;
     mapping(address => uint) public numTicketsBought;
+    mapping(uint => address) public registeredBuyers;
 
     // EVENTS
     event CreateTicket(address buyer, uint ticketID);
@@ -288,8 +289,26 @@ contract Event is ERC721 {
      * @dev approve a buyer to buy ticket of another user
      */
     function approveAsBuyer(address buyer, uint ticketID) public requiredStage(Stages.Active){
-        //setApprovalForAll(buyer, bool(true));
+        require(ownerOf(ticketID) == msg.sender, "no permission");
+        setApprovalForAll(buyer, bool(true));
         approve(buyer, ticketID);
+    }
+
+    /**
+     * @dev register as buyer
+     */
+    function registerAsBuyer(uint ticketID) public requiredStage(Stages.Active){
+        require(registeredBuyers[ticketID] != msg.sender, "You have already registered to buy");
+
+        registeredBuyers[ticketID] = msg.sender;
+
+    }
+
+    /**
+     * @dev get registered buyer
+     */
+    function getRegisteredBuyer(uint ticketID) public view returns(address) {
+        return registeredBuyers[ticketID];
     }
 
     /**
@@ -300,6 +319,7 @@ contract Event is ERC721 {
     function buyTicketFromUser(uint ticketID) public payable requiredStage(Stages.Active) hasEnoughMoney(msg.value) returns (bool) {
         // Check if ticket is available for sale
         require(tickets[ticketID].status == TicketStatus.AvailableForSale, "Ticket not available for sale");
+        //approveAsBuyer(msg.sender, ticketID);
 
         //calc amount to pay after royalty
         uint ticketPrice = tickets[ticketID].price;
@@ -308,13 +328,17 @@ contract Event is ERC721 {
 
         //transfer money to seller
         address payable seller = payable(ownerOf(ticketID));
-        //seller.transfer(priceToPay);
-        bool sent = seller.send(price);
+        ///seller.transfer(priceToPay);
+        // bool sent = seller.send(price);
+        balances[seller] += priceToPay;
+        balances[owner] += royalty;
 
-        require(sent, "Failed to send ether to user");
+        // require(sent, "Failed to send ether to user");
 
         emit TicketSold(seller, msg.sender, ticketID);
         safeTransferFrom(seller, msg.sender, ticketID);
+
+        tickets[ticketID].status = TicketStatus.Valid;
 
         return true;
 
