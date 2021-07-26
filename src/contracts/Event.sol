@@ -96,7 +96,7 @@ contract Event is ERC721 {
     // to store the balances for buyers and organizers
     uint totalBalances = 0;
     mapping(address => uint) public balances;
-    mapping(address => bool) public isUserRefunded;
+    mapping(address => bool) public isUserRefund;
     mapping(address => uint) public numTicketsBought;
     mapping(uint => address) public registeredBuyers;
 
