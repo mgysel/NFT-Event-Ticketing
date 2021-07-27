@@ -16,6 +16,7 @@
     "chai-bignumber": "3.0.0",
     "ganache-cli": "^6.12.2",
     "package.json": "^2.0.1",
+    "qrcode.react": "^1.0.1",
     "react-bootstrap": "1.0.0-beta.5",
     "react-dom": "16.8.4",
     "react-scripts": "2.1.3",

@@ -266,7 +266,6 @@
             if(t[j].status == 3){
               let o = await eventContracts[i].methods.ownerOf(j).call()
               console.log(o)
-              console.log(isApproved)
               secTickets.push({
                 'eventNumber': i, 
                 'eventName': eventData[i]['eventName'],
@@ -277,6 +276,8 @@
             }
           }
         }
+
+        setSecondaryTickets(secTickets)
       }
 
       getSecondaryTickets()
@@ -440,6 +441,9 @@
   
   // Allows user to mark ticket for sale
   async function setTicketForSale(e, ticketIndex) {
+    console.log("enters")
+    console.log(ticketIndex)
+    console.log(tickets[0])
       try {
           var oTicket = tickets[ticketIndex];
           var oContract = oContractsMap[oTicket.contractAddress];
