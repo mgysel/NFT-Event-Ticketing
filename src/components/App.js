@@ -61,6 +61,7 @@
   const [formCanBeResold, setFormCanBeResold] = useState(true);
   const [formRoyaltyPercent, setFormRoyaltyPercent] = useState(0);
   
+  const [resalePrice, setResalePrice] = useState("");
   const [sRandomHash, setSRandomHash] = useState("");
   const [eventStage, setEventStage] = useState(0);
   const [qrCodeValue, setQrCodeValue] = useState(0);
@@ -492,7 +493,7 @@
           var oContract = oContractsMap[oTicket.contractAddress];
           if(oContract) {
               await oContract.methods
-                  .setTicketForSale(oTicket.ticketID).send({ from: account })
+                  .setTicketForSale(oTicket.ticketID, resalePrice).send({ from: account })
           }
       } catch(e) {
         console.log('Set ticket for sale: ', e)
@@ -586,13 +587,13 @@
             Purchase Tickets
           </Tab>
           <Tab>
+            Secondary Market Tickets
+          </Tab>
+          <Tab>
             My Tickets
           </Tab>
           <Tab>
             My Events
-          </Tab>
-          <Tab>
-            Secondary Tickets
           </Tab>
           <Tab>
             Oracle
@@ -743,157 +744,7 @@
             </SimpleGrid>
           </TabPanel>
           <TabPanel mt="15px" mb="15px" align="center">
-              <Heading mb="25px">My Tickets</Heading>
-              <SimpleGrid columns={4} spacing={10} mt="30px">
-                { 
-                  tickets.map((id, index) => (
-                      <Box 
-                        key={index} 
-                        borderRadius="5px"
-                        border="1px solid"
-                        borderColor="gray.200"
-                        p="20px" 
-                        width="20rem"
-                      >
-                        <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px">Ticket for Event {id.eventName}</Text>
-                        <Text>Event: {id.eventName}</Text>
-                        <Text>Ticket ID: {id.ticketID}</Text>
-                        <form>
-                          <Input
-                            isRequired
-                            id='eventStage'
-                            type='number'
-                            size="md"
-                            placeholder='Set Random Number'
-                            onChange={(e) => setSRandomHash(e.target.value)}
-                            mb="0px"
-                            mt="10px"
-                            _placeholder={{ color: 'gray.500' }}
-                          />
-                          <Button 
-                            type='submit' 
-                            color={darkGreen}
-                            backgroundColor={lightGreen}
-                            size="lg"
-                            mt="10px"
-                            width="210px"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              setTicketToUsed(e, index)
-                            }}
-                          >
-                            Checkin
-                          </Button>
-                        </form>
-                        <Button 
-                          type='submit' 
-                          color={darkGreen}
-                          backgroundColor={lightGreen}
-                          size="lg"
-                          mt="10px"
-                          width="210px"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            setTicketForSale(e, index)
-                          }}
-                        >
-                          Set Ticket For Sale
-                        </Button>
-                        <Button 
-                          type='submit' 
-                          color={darkGreen}
-                          backgroundColor={lightGreen}
-                          size="lg"
-                          mt="10px"
-                          width="210px"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            withdraw(e, index)
-                          }}
-                        >
-                          Withdraw Balance
-                        </Button>
-                      </Box>
-  
-                  ))
-                }
-              </SimpleGrid>
-          </TabPanel>
-          <TabPanel mt="15px" mb="15px" align="center">
-              <Heading mb="25px">My Events</Heading>
-              <SimpleGrid columns={4} spacing={10} mt="30px">
-                { 
-                  myEvents.map((id, index) => (
-                    <Box 
-                      key={index} 
-                      borderRadius="5px"
-                      border="1px solid"
-                      borderColor="gray.200"
-                      p="20px" 
-                      width="20rem"
-                    >
-                      <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px"> Event {index + 1}</Text>
-                      <Text>Event: {id.eventName}</Text>
-                      <Text>Balance: {id.balance}</Text>
-                      <Text>Number of Tickets Left: {id.numTicketsLeft}</Text>
-                      <Box                       
-                        borderRadius="5px"
-                        border="1px solid"
-                        borderColor="gray.100"
-                        padding="10px"
-                        mt="10px"
-                      >
-                        <RadioGroup 
-                          mb="10px"
-                          onChange={setEventStage} 
-                          value={eventStage}
-                          defaultValue={id.stage.toString()}
-                        >
-                          <Stack spacing={4} direction="column">
-                            <Radio value="0">Prep</Radio>
-                            <Radio value="1">Active</Radio>
-                            <Radio value="2">Paused</Radio>
-                            <Radio value="3">Checkin Open</Radio>
-                            <Radio value="4">Cancelled</Radio>
-                            <Radio value="5">Closed</Radio>
-                          </Stack>
-                        </RadioGroup>
-                        <Button 
-                          type='submit' 
-                          color={darkGreen}
-                          backgroundColor={lightGreen}
-                          size="lg"
-                          mt="10px"
-                          width="210px"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            updateEventStage(e, index)
-                          }}
-                        >
-                          Set Event Stage
-                        </Button>
-                      </Box>
-                      <Button 
-                          type='submit' 
-                          color={darkGreen}
-                          backgroundColor={lightGreen}
-                          size="lg"
-                          mt="10px"
-                          width="210px"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            ownerWithdraw(e, index)
-                          }}
-                        >
-                          Owner Withdraw
-                        </Button>
-                    </Box>
-                  ))
-                }
-              </SimpleGrid>
-          </TabPanel>
-          <TabPanel mt="15px" mb="15px" align="center">
-            <Heading mb="25px">Secondary Tickets</Heading>
+            <Heading mb="25px">Secondary Market Tickets</Heading>
             <SimpleGrid columns={4} spacing={10} mt="30px">
               { 
                 secondaryTickets.map((id, index) => (
@@ -952,6 +803,185 @@
                 ))
               }
             </SimpleGrid>
+          </TabPanel>
+          <TabPanel mt="15px" mb="15px" align="center">
+              <Heading mb="25px">My Tickets</Heading>
+              <SimpleGrid columns={4} spacing={10} mt="30px">
+                { 
+                  tickets.map((id, index) => (
+                      <Box 
+                        key={index} 
+                        borderRadius="5px"
+                        border="1px solid"
+                        borderColor="gray.200"
+                        p="20px" 
+                        width="20rem"
+                      >
+                        <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px">Ticket for Event {id.eventName}</Text>
+                        <Text>Event: {id.eventName}</Text>
+                        <Text>Ticket ID: {id.ticketID}</Text>
+                        <Box                       
+                          borderRadius="5px"
+                          border="1px solid"
+                          borderColor="gray.100"
+                          padding="10px"
+                          mt="10px"
+                        >
+                          <form>
+                            <Input
+                              isRequired
+                              id='eventStage'
+                              type='number'
+                              size="md"
+                              placeholder='Set Random Number'
+                              onChange={(e) => setSRandomHash(e.target.value)}
+                              mb="0px"
+                              mt="10px"
+                              _placeholder={{ color: 'gray.500' }}
+                            />
+                            <Button 
+                              type='submit' 
+                              color={darkGreen}
+                              backgroundColor={lightGreen}
+                              size="lg"
+                              mt="10px"
+                              width="210px"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                setTicketToUsed(e, index)
+                              }}
+                            >
+                              Checkin
+                            </Button>
+                          </form>
+                        </Box>
+                        <Box                       
+                          borderRadius="5px"
+                          border="1px solid"
+                          borderColor="gray.100"
+                          padding="10px"
+                          mt="10px"
+                        >
+                          <form>
+                            <Input
+                              isRequired
+                              id='resalePrice'
+                              type='number'
+                              size="md"
+                              placeholder='Set Resale Price'
+                              onChange={(e) => setResalePrice(e.target.value)}
+                              mb="0px"
+                              mt="10px"
+                              _placeholder={{ color: 'gray.500' }}
+                            />
+                            <Button 
+                              type='submit' 
+                              color={darkGreen}
+                              backgroundColor={lightGreen}
+                              size="lg"
+                              mt="10px"
+                              width="210px"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                setTicketForSale(e, index)
+                              }}
+                            >
+                              Set Ticket For Sale
+                            </Button>
+                          </form>
+                        </Box>
+                        <Button 
+                          type='submit' 
+                          color={darkGreen}
+                          backgroundColor={lightGreen}
+                          size="lg"
+                          mt="10px"
+                          width="210px"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            withdraw(e, index)
+                          }}
+                        >
+                          Withdraw Balance
+                        </Button>
+                      </Box>
+  
+                  ))
+                }
+              </SimpleGrid>
+          </TabPanel>
+          <TabPanel mt="15px" mb="15px" align="center">
+              <Heading mb="25px">My Events</Heading>
+              <SimpleGrid columns={4} spacing={10} mt="30px">
+                { 
+                  myEvents.map((id, index) => (
+                    <Box 
+                      key={index} 
+                      borderRadius="5px"
+                      border="1px solid"
+                      borderColor="gray.200"
+                      p="20px" 
+                      width="20rem"
+                    >
+                      <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px"> Event {index + 1}</Text>
+                      <Text>Event: {id.eventName}</Text>
+                      <Text>Balance: {id.balance}</Text>
+                      <Text>Number of Tickets Left: {id.numTicketsLeft}</Text>
+                      <Box                       
+                        borderRadius="5px"
+                        border="1px solid"
+                        borderColor="gray.100"
+                        padding="10px"
+                        mt="10px"
+                      >
+                        <RadioGroup 
+                          mb="10px"
+                          onChange={setEventStage} 
+                          value={eventStage}
+                          defaultValue={id.stage.toString()}
+                        >
+                          <Stack spacing={4} direction="column">
+                            <Radio value="0" mb="0">Prep</Radio>
+                            <Radio value="1">Active</Radio>
+                            <Radio value="2">Paused</Radio>
+                            <Radio value="3">Checkin Open</Radio>
+                            <Radio value="4">Cancelled</Radio>
+                            <Radio value="5">Closed</Radio>
+                          </Stack>
+                        </RadioGroup>
+                        <Button 
+                          type='submit' 
+                          color={darkGreen}
+                          backgroundColor={lightGreen}
+                          size="lg"
+                          mt="10px"
+                          width="210px"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            updateEventStage(e, index)
+                          }}
+                        >
+                          Set Event Stage
+                        </Button>
+                      </Box>
+                      <Button 
+                          type='submit' 
+                          color={darkGreen}
+                          backgroundColor={lightGreen}
+                          size="lg"
+                          mt="10px"
+                          width="210px"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            ownerWithdraw(e, index)
+                          }}
+                        >
+                          Owner Withdraw
+                        </Button>
+                    </Box>
+                  ))
+                }
+              </SimpleGrid>
           </TabPanel>
           <TabPanel mt="15px" mb="15px" align="center">
             <Heading mb="25px">Oracle</Heading>

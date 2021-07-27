@@ -231,22 +231,6 @@ contract Event is ERC721 {
         return true;
 	}
 
-    //  /**
-    //  * @dev get ticket status
-    //  */
-    // function getTicketStatus(uint ticketID) public view returns (TicketStatus) {
-    //     return tickets[ticketID].status;
-    // }
-
-    // /**
-    //  * @dev get ticket by ID
-    //  */
-    // function getTicket(uint ticketID) public view returns(uint32 price, uint32 resalePrice, TicketStatus status) {
-    //     price = tickets[ticketID].price;
-    //     resalePrice = tickets[ticketID].resalePrice;
-    //     status = tickets[ticketID].status;
-    // }
-
     /**
      * @dev get all tickets 
      */
@@ -326,78 +310,6 @@ contract Event is ERC721 {
     function getRegisteredBuyer(uint ticketID) public view returns(address) {
         return registeredBuyers[ticketID];
     }
-
-        // /**
-    //  * @notice Change Stage to closed
-    //  * @dev Only owner , only able to close in Stages.Cancelled or Stages.CheckinOpen
-    //  */
-    // function setStageToClosed() public view onlyOwner ableToClose returns (Stages) {
-    //     stage == Stages.Closed;
-    //     return stage;
-    // }
-    
-    // function setStageToPause() public view onlyOwner requiredStage(Stages.Active) returns (Stages) {
-    //     stage == Stages.Paused;
-    //     return stage;
-    // }
-    
-    // function setStageToActive() public view onlyOwner ableToActive returns (Stages) {
-    //     stage == Stages.Active;
-    //     return stage;
-    // }
-    
-    // function setStageToCheckinOpen() public view onlyOwner requiredStage(Stages.Active) returns (Stages) {
-    //     stage == Stages.CheckinOpen;
-    //     return stage;
-    // }
-    
-    // function setStageToCancelled() public  onlyOwner ableToCancelled returns (Stages) {
-    //     stage == Stages.Cancelled;
-    //     isCancelled = true;
-    //     balances[owner] -= price * tickets.length;
-    //     return stage;
-    // }
-    
-    // function setStageNew(Stages _s) public onlyOwner returns (Stages) {
-    //     if (_s == Stages.Closed) {
-    //         require(stage == Stages.CheckinOpen || stage == Stages.Cancelled, "Need to in cancelled or checkinOpen stage");
-    //         stage == Stages.Closed;
-    //         emit StageChangeTo(stage);
-    //         return stage;
-    //     }
-        
-    //     if (_s == Stages.Cancelled) {
-    //         require(stage == Stages.Prep || stage == Stages.Paused, "Need to in active or paused stage");
-    //         stage == Stages.Cancelled;
-    //         isCancelled = true;
-    //         emit StageChangeTo(stage);
-    //         return stage;
-    //     }
-        
-    //     if (_s == Stages.Active) {
-    //         require(stage == Stages.Prep || stage == Stages.Paused, "Need to in prep or paused stage");
-    //         stage == Stages.Active;
-    //         emit StageChangeTo(stage);
-    //         return stage;
-    //     }
-        
-        
-    //     if (_s == Stages.Paused) {
-    //         require(stage == Stages.Active, "Need to in active stage");
-    //         stage == Stages.Paused;
-    //         emit StageChangeTo(stage);
-    //         return stage;
-    //     }
-        
-    //     if(_s == Stages.CheckinOpen) {
-    //         require(stage == Stages.Active, "Need to in active or paused stage");
-    //         stage == Stages.CheckinOpen;
-    //         emit StageChangeTo(stage);
-    //         return stage;
-    //     }
-        
-    //     return stage;
-    // }
     
     /** 
      * @notice Change Status
@@ -450,27 +362,6 @@ contract Event is ERC721 {
         require(ownerOf(ticketID) == msg.sender, "User does not own this ticket");
         _;
     }
-    
-    // // Requires stage condition to change to closed stage
-    // modifier ableToClose() {
-    //     require(stage == Stages.CheckinOpen || stage == Stages.Cancelled, "Can only set stage from cancelled or checkinOpen");
-    //     _;
-    // }
-    
-    // // Requires stage condition to change to active stage
-    // modifier ableToActive() {
-    //     require(stage == Stages.Prep || stage == Stages.Paused, "Can only set stage from Prep or Paused");
-    //     _;
-    // }
-    
-    
-    // // Requires stage condition to change to cancelled stage
-    // modifier ableToCancelled() {
-    //     require(stage == Stages.Prep || stage == Stages.Paused, "Can only set stage from cancelled or checkinOpen");
-    //     _;
-    // }
-    
-    
     
 }
 
