@@ -310,7 +310,6 @@ contract('Event', (accounts) => {
         })
         
         it('checking ticket mark as available for sale', async () => {
-            //console.log(await event.tickets(buyer1));
             let ticketID = 0
             let e = await event.setTicketForSale(ticketID, { from: buyer1 })
             truffleAssert.eventEmitted(e, 'TicketForSale', (ev) => {
@@ -585,9 +584,9 @@ contract('Event', (accounts) => {
             // Checkin Open (3) Stage
             await event.setStage(3)
             await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
-            // // Cancelled (4) Stage
-            // await event.setStage(4)
-            // await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
+            // Cancelled (4) Stage
+            await event.setStage(4)
+            await event.ownerWithdraw({ from: owner }).should.be.rejectedWith(EVM_REVERT)
         })
 
         it('owner cannot withdraw money if no money in account', async () => {
@@ -777,10 +776,10 @@ contract('Event', (accounts) => {
 contract('EventCreator', (accounts) => {
     // Variables for creating the Event Contract
     let eventCreator
-    const _numTickets = 5;
-    const _price = 50;
-    const _canBeResold = true;
-    const _royaltyPercent = 20;
+    const _numTickets = 5
+    const _price = 50
+    const _canBeResold = true
+    const _royaltyPercent = 20
     const _eventName = 'EventName'
     const _eventSymbol = 'EventSymbol'
 
