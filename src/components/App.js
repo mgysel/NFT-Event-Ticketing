@@ -61,6 +61,7 @@
   const [formCanBeResold, setFormCanBeResold] = useState(true);
   const [formRoyaltyPercent, setFormRoyaltyPercent] = useState(0);
   
+  const [resalePrice, setResalePrice] = useState("");
   const [sRandomHash, setSRandomHash] = useState("");
   const [eventStage, setEventStage] = useState(0);
   const [qrCodeValue, setQrCodeValue] = useState(0);
@@ -492,7 +493,7 @@
           var oContract = oContractsMap[oTicket.contractAddress];
           if(oContract) {
               await oContract.methods
-                  .setTicketForSale(oTicket.ticketID).send({ from: account })
+                  .setTicketForSale(oTicket.ticketID, resalePrice).send({ from: account })
           }
       } catch(e) {
         console.log('Set ticket for sale: ', e)
@@ -758,47 +759,76 @@
                         <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px">Ticket for Event {id.eventName}</Text>
                         <Text>Event: {id.eventName}</Text>
                         <Text>Ticket ID: {id.ticketID}</Text>
-                        <form>
-                          <Input
-                            isRequired
-                            id='eventStage'
-                            type='number'
-                            size="md"
-                            placeholder='Set Random Number'
-                            onChange={(e) => setSRandomHash(e.target.value)}
-                            mb="0px"
-                            mt="10px"
-                            _placeholder={{ color: 'gray.500' }}
-                          />
-                          <Button 
-                            type='submit' 
-                            color={darkGreen}
-                            backgroundColor={lightGreen}
-                            size="lg"
-                            mt="10px"
-                            width="210px"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              setTicketToUsed(e, index)
-                            }}
-                          >
-                            Checkin
-                          </Button>
-                        </form>
-                        <Button 
-                          type='submit' 
-                          color={darkGreen}
-                          backgroundColor={lightGreen}
-                          size="lg"
+                        <Box                       
+                          borderRadius="5px"
+                          border="1px solid"
+                          borderColor="gray.100"
+                          padding="10px"
                           mt="10px"
-                          width="210px"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            setTicketForSale(e, index)
-                          }}
                         >
-                          Set Ticket For Sale
-                        </Button>
+                          <form>
+                            <Input
+                              isRequired
+                              id='eventStage'
+                              type='number'
+                              size="md"
+                              placeholder='Set Random Number'
+                              onChange={(e) => setSRandomHash(e.target.value)}
+                              mb="0px"
+                              mt="10px"
+                              _placeholder={{ color: 'gray.500' }}
+                            />
+                            <Button 
+                              type='submit' 
+                              color={darkGreen}
+                              backgroundColor={lightGreen}
+                              size="lg"
+                              mt="10px"
+                              width="210px"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                setTicketToUsed(e, index)
+                              }}
+                            >
+                              Checkin
+                            </Button>
+                          </form>
+                        </Box>
+                        <Box                       
+                          borderRadius="5px"
+                          border="1px solid"
+                          borderColor="gray.100"
+                          padding="10px"
+                          mt="10px"
+                        >
+                          <form>
+                            <Input
+                              isRequired
+                              id='eventStage'
+                              type='number'
+                              size="md"
+                              placeholder='Set Resale Price'
+                              onChange={(e) => setResalePrice(e.target.value)}
+                              mb="0px"
+                              mt="10px"
+                              _placeholder={{ color: 'gray.500' }}
+                            />
+                            <Button 
+                              type='submit' 
+                              color={darkGreen}
+                              backgroundColor={lightGreen}
+                              size="lg"
+                              mt="10px"
+                              width="210px"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                setTicketForSale(e, index)
+                              }}
+                            >
+                              Set Ticket For Sale
+                            </Button>
+                          </form>
+                        </Box>
                         <Button 
                           type='submit' 
                           color={darkGreen}
