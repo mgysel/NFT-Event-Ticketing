@@ -99,7 +99,7 @@ contract Event is ERC721 {
     event WithdrawMoney(address receiver, uint money);
     event OwnerWithdrawMoney(address owner, uint money);
     event TicketForSale(address seller, uint ticketID);
-    event TicketSold(address seller, address buyer, uint ticketID);
+    event TicketSold(address contractAddress, string eventName, address buyer, uint ticketID);
     event TicketUsed(address contractAddress, uint ticketID, string eventName, string sQRCodeKey);
 
     // Creates a new Event Contract
@@ -179,7 +179,7 @@ contract Event is ERC721 {
 
         // require(sent, "Failed to send ether to user");
 
-        emit TicketSold(seller, msg.sender, ticketID);
+        emit TicketSold(address(this), name(), msg.sender, ticketID);
         safeTransferFrom(seller, msg.sender, ticketID);
 
         tickets[ticketID].status = TicketStatus.Valid;
@@ -218,6 +218,7 @@ contract Event is ERC721 {
     function setTicketForSale(uint ticketID) public requiredStage(Stages.Active) ownsTicket(ticketID) returns(bool) {
 		// Validate that user has a ticket they own and it is valid
         require(tickets[ticketID].status != TicketStatus.Used, "Ticket has already been used");
+        require(canBeResold == true, "Ticket cannot be resold");
         
         // Ticket is valid so mark it as used
         tickets[ticketID].status = TicketStatus.AvailableForSale;
@@ -308,22 +309,22 @@ contract Event is ERC721 {
         approve(buyer, ticketID);
     }
 
-    // /**
-    //  * @dev register as buyer
-    //  */
-    // function registerAsBuyer(uint ticketID) public requiredStage(Stages.Active){
-    //     require(registeredBuyers[ticketID] != msg.sender, "You have already registered to buy");
+    /**
+     * @dev register as buyer
+     */
+    function registerAsBuyer(uint ticketID) public requiredStage(Stages.Active){
+        require(registeredBuyers[ticketID] != msg.sender, "You have already registered to buy");
 
-    //     registeredBuyers[ticketID] = msg.sender;
+        registeredBuyers[ticketID] = msg.sender;
 
-    // }
+    }
 
-    // /**
-    //  * @dev get registered buyer
-    //  */
-    // function getRegisteredBuyer(uint ticketID) public view returns(address) {
-    //     return registeredBuyers[ticketID];
-    // }
+    /**
+     * @dev get registered buyer
+     */
+    function getRegisteredBuyer(uint ticketID) public view returns(address) {
+        return registeredBuyers[ticketID];
+    }
 
         // /**
     //  * @notice Change Stage to closed

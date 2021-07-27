@@ -217,6 +217,44 @@
                   console.log(receipt);
                   console.log("error listening on event TicketUsed");
               });
+
+              // Ticket Sold event
+              oEventContract.events.TicketSold().on("connected", function () {
+                console.log("listening on event CreateTicket");
+                })
+                .on("data", (event) => {
+                    console.log("event fired: " + JSON.stringify(event.returnValues)); 
+                    
+                    const requestOptions = {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({contractAddress: event.returnValues.contractAddress,
+                            eventName: event.returnValues.eventName,
+                            userAddress: event.returnValues.buyer,
+                            ticketId: event.returnValues.ticketID.toString()})
+                    };
+                    fetch(backendServer + "/ticket/update", requestOptions)
+                          .then(res => res.json())
+                          .then(
+                            (result) => {
+                                console.log(result);
+                                if(result.result === "success") {
+                                    getUserTickets();
+                                }
+                            },
+                            // Note: it's important to handle errors here
+                            // instead of a catch() block so that we don't swallow
+                            // exceptions from actual bugs in components.
+                            (error) => {
+                              console.error(error);
+                            }
+                          );
+                })
+                .on("error", function (error, receipt) {
+                    console.log(error);
+                    console.log(receipt);
+                    console.log("error listening on event CreateTicket");
+                });
       
             // Extract event data from event contract
             const thisEventData = {}
@@ -261,12 +299,13 @@
         //eventData['secondaryTickets'] = []
         for (var i = 0; i < eventContracts.length; i++) {
           let t = await eventContracts[i].methods.getTicketsCreated().call()
+          console.log(t)
           
           for(var j = 0; j < t.length; j++){
             //check if available for sale
             let r = await eventContracts[i].methods.getRegisteredBuyer(j).call()
             console.log(r)
-            if(t[j].status == 3){
+            if(t[j].status == 2){
               let o = await eventContracts[i].methods.ownerOf(j).call()
               console.log(o)
               secTickets.push({
@@ -279,7 +318,7 @@
             }
           }
         }
-
+        console.log(secTickets)
         setSecondaryTickets(secTickets)
       }
 
@@ -423,6 +462,7 @@
       //await eventContracts[eventNumber].methods.approveAsBuyer(account, ticketID).call({ from: seller })
       await eventContracts[eventNumber].methods.buyTicketFromUser(ticketID).send({ value: amount, from: account})
       //loadEventCreator()
+      await getUserTickets()
     } catch(e) {
       console.log('Buy Ticket Error: ', e)
     }
@@ -754,7 +794,7 @@
                           width="210px"
                           onClick={(e) => {
                             e.preventDefault()
-                            setTicketForSale(e, id.ticketID)
+                            setTicketForSale(e, index)
                           }}
                         >
                           Set Ticket For Sale

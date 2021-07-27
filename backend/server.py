@@ -124,7 +124,51 @@ def newticket_get():
         dumps(arrOutput), 
         200
     ) 
+
+@APP.route('/ticket/update', methods=['PUT'])
+def ticket_update():
+    '''
+    Given a smart contract ID, event name, venue, ticket price
+    Adds event to database
+    '''
+    data = request.get_json()
+    fields = ['contractAddress', 'eventName', 'userAddress',  'ticketId']
+    for field in fields:
+        if not field in data:
+            return make_response(
+                dumps(
+                    {"message": "No contractAddress, eventName, userAddress or ticketId parameters."}
+                ), 
+                400
+            ) 
+
+    contract_Address = data['contractAddress']
+    event_name = data['eventName']
+    user_Address = data['userAddress']
+    ticket_Id = data['ticketId']
+    print(event_name)
+    print(user_Address)
+    print(ticket_Id)
     
+    code_json = {
+        'contract_Address': contract_Address,
+        'event_name': event_name,
+        'user_Address': user_Address,
+        'ticket_Id': ticket_Id
+    }
+
+    db = client['project']
+    coll = db['NewTicket']
+    coll.find_one_and_update({ 'ticket_Id': ticket_Id }, { '$set': { 'user_Address' : user_Address } })
+
+    return make_response(
+        dumps(
+            {
+                "result": "success",
+            }
+        ), 
+        201
+    )   
     
 ############################
 #QR Code Functionality start
