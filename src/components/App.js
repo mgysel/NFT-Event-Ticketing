@@ -17,10 +17,13 @@
   IconButton,
   Icon,
   Input,
+  InputGroup,
   SimpleGrid,
   Box,
   VStack,
   Stack,
+  Radio,
+  RadioGroup,
   Tabs,
   TabList,
   TabPanels,
@@ -375,7 +378,7 @@
       // Check that eventCreator
       if (eventContracts[index] !== 'undefined') {
         try {
-          await eventContracts[index].methods.setStage(eventStage).send({ from: account });
+          await eventContracts[index].methods.setStage(parseInt(eventStage)).send({ from: account });
         } catch(e) {
           console.log('Update event stage error: ', e)
         }
@@ -612,17 +615,30 @@
                     _placeholder={{ color: 'gray.500' }}
                     w="450px"
                   />
-                  <Input
-                    isRequired
-                    id='canBeResold'
-                    type='text'
-                    size="md"
-                    placeholder='Can the Tickets be resold?'
-                    onChange={(e) => setFormCanBeResold(e.target.value)}
+                  <RadioGroup 
                     mb="10px"
                     _placeholder={{ color: 'gray.500' }}
                     w="450px"
-                  />
+                    h="40px"
+                    onChange={setFormCanBeResold} value={formCanBeResold}
+                    border="1px"
+                    borderRadius="5px"
+                    borderColor='gray.200'
+                    textAlign=""
+                  >
+                    <Stack spacing={4} direction="row">
+                      <FormLabel 
+                        color='gray.500' 
+                        verticalAlign='middle'
+                        ml="15px"
+                        mt="6px"
+                      >
+                        Can tickets be resold?
+                      </FormLabel>
+                      <Radio value={true}>Yes</Radio>
+                      <Radio value={false}>No</Radio>
+                    </Stack>
+                  </RadioGroup>
                   <Input
                     isRequired
                     id='royaltyPercent'
@@ -651,35 +667,37 @@
             <SimpleGrid columns={4} spacing={10} mt="30px">
               { 
                 eventData.map((id, index) => (
-                    <Box key={index}        
-                      borderRadius="5px"
-                      border="1px solid"
-                      borderColor="gray.200"
-                      p="20px" 
-                      width="20rem"
-                    >
-                      <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px"> Event {index + 1}</Text>
-                      <Text>Name: {id.eventName}</Text>
-                      <Text>Symbol: {id.eventSymbol}</Text>
-                      <Text>Number of Tickets: {id.numTicketsLeft}</Text>
-                      <Text>Price: {id.price}</Text>
-                      <Text>Can Be Resold?: {id.canBeResold}</Text>
-                      <Text>Royalty Percent: {id.royaltyPercent}</Text>
-                      <Text>Stage: {id.stage}</Text>
-                      <Button 
-                        type='submit' 
-                        color={darkGreen}
-                        backgroundColor={lightGreen}
-                        size="lg"
-                        mt="13px"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          buyTicket(e, index)
-                        }}
+                    id.stage !== 0 && id.stage !== 2 && id.stage !== 5 && (
+                      <Box key={index}        
+                        borderRadius="5px"
+                        border="1px solid"
+                        borderColor="gray.200"
+                        p="20px" 
+                        width="20rem"
                       >
-                          Buy Ticket
-                      </Button>
-                    </Box>
+                        <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px"> Event {index + 1}</Text>
+                        <Text>Name: {id.eventName}</Text>
+                        <Text>Symbol: {id.eventSymbol}</Text>
+                        <Text>Number of Tickets: {id.numTicketsLeft}</Text>
+                        <Text>Price: {id.price}</Text>
+                        <Text>Can Be Resold?: {id.canBeResold.toString()}</Text>
+                        <Text>Royalty Percent: {id.royaltyPercent}</Text>
+                        <Text>Stage: {id.stage}</Text>
+                        <Button 
+                          type='submit' 
+                          color={darkGreen}
+                          backgroundColor={lightGreen}
+                          size="lg"
+                          mt="13px"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            buyTicket(e, index)
+                          }}
+                        >
+                            Buy Ticket
+                        </Button>
+                      </Box>
+                    )
                 ))
               }
             </SimpleGrid>
@@ -778,18 +796,28 @@
                       <Text>Event: {id.eventName}</Text>
                       <Text>Balance: {id.balance}</Text>
                       <Text>Number of Tickets Left: {id.numTicketsLeft}</Text>
-                      <form>
-                        <Input
-                          isRequired
-                          id='eventStage'
-                          type='number'
-                          size="md"
-                          placeholder='Set Event Stage'
-                          onChange={(e) => setEventStage(e.target.value)}
-                          mb="0px"
-                          mt="10px"
-                          _placeholder={{ color: 'gray.500' }}
-                        />
+                      <Box                       
+                        borderRadius="5px"
+                        border="1px solid"
+                        borderColor="gray.100"
+                        padding="10px"
+                        mt="10px"
+                      >
+                        <RadioGroup 
+                          mb="10px"
+                          onChange={setEventStage} 
+                          value={eventStage}
+                          defaultValue={id.stage.toString()}
+                        >
+                          <Stack spacing={4} direction="column">
+                            <Radio value="0">Prep</Radio>
+                            <Radio value="1">Active</Radio>
+                            <Radio value="2">Paused</Radio>
+                            <Radio value="3">Checkin Open</Radio>
+                            <Radio value="4">Cancelled</Radio>
+                            <Radio value="5">Closed</Radio>
+                          </Stack>
+                        </RadioGroup>
                         <Button 
                           type='submit' 
                           color={darkGreen}
@@ -804,7 +832,7 @@
                         >
                           Set Event Stage
                         </Button>
-                      </form>
+                      </Box>
                       <Button 
                           type='submit' 
                           color={darkGreen}
@@ -841,7 +869,6 @@
                     <Text>Event: {id.eventName}</Text>
                     <Text>ID: {id.ticketID}</Text>
                     <Text>Owner: {id.owner}</Text>
-                    <Text>isApproved: {id.isApproved} </Text>
                     <Button 
                     type='submit' 
                     color={darkGreen}
@@ -891,7 +918,11 @@
               <SimpleGrid columns={4} spacing={10} mt="30px">
                 { 
                   arrQRCode.map((id, index) => (
-                    <Box key={index} border="1px solid black" p="20px" width="20rem">
+                    <Box key={index}                     
+                      borderRadius="5px"
+                      border="1px solid"
+                      borderColor="gray.200" p="20px" width="20rem"
+                    >
                       <Text>Event: {id.eventName}</Text>
                       <Text>Your Personal Entry Key: {id.qrCode}</Text>
                       <Text>Data sent to Entry Management System Successfully</Text>

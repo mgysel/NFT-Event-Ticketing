@@ -24,7 +24,6 @@ contract EventCreator {
             string memory _eventName, string memory _eventSymbol) external returns(address newEvent) {
 
         // Create a new Event smart contract
-        // NOTE: 'new' keyword creates a new SC and returns address
         Event e = new Event(msg.sender, _numTickets, _price, _canBeResold, _royaltyPercent, _eventName, _eventSymbol);
         
         // Store/return event address
@@ -32,7 +31,6 @@ contract EventCreator {
         address eventAddress = address(e);
         emit CreateEvent(msg.sender, eventAddress);
 
-        // QUESTION: I cannot return this because async??
         return eventAddress;
     }
 
@@ -81,9 +79,6 @@ contract Event is ERC721 {
     /// Percent royalty event creator receives from ticket resales
     uint8 public royaltyPercent;
     
-    // For each user, store corresponding ticket struct
-    //mapping(address => Ticket) public tickets;
-    
     // if ticket can be resold in the second market
     bool public canBeResold;
     
@@ -97,7 +92,6 @@ contract Event is ERC721 {
     uint totalBalances = 0;
     mapping(address => uint) public balances;
     mapping(address => bool) public isUserRefund;
-    mapping(address => uint) public numTicketsBought;
     mapping(uint => address) public registeredBuyers;
 
     // EVENTS
@@ -153,14 +147,185 @@ contract Event is ERC721 {
             balances[msg.sender] += amount;
         }
         balances[owner] += price;
+        
         // Mint NFT
         _safeMint(msg.sender, ticketID);
         emit CreateTicket(address(this), name(), msg.sender, ticketID);
         
         return ticketID;
     }
+
+    /**
+     * @notice Mark ticket as used
+     * @dev Only a valid buyer can mark ticket as used
+     * @param ticketID ticket ID of ticket
+     */
+    function buyTicketFromUser(uint ticketID) public payable requiredStage(Stages.Active) hasEnoughMoney(msg.value) returns (bool) {
+        // Check if ticket is available for sale
+        require(tickets[ticketID].status == TicketStatus.AvailableForSale, "Ticket not available for sale");
+        //approveAsBuyer(msg.sender, ticketID);
+
+        //calc amount to pay after royalty
+        uint ticketPrice = tickets[ticketID].price;
+        uint royalty = (royaltyPercent/100) * ticketPrice;
+        uint priceToPay = ticketPrice - royalty;
+
+        //transfer money to seller
+        address payable seller = payable(ownerOf(ticketID));
+        ///seller.transfer(priceToPay);
+        // bool sent = seller.send(price);
+        balances[seller] += priceToPay;
+        balances[owner] += royalty;
+
+        // require(sent, "Failed to send ether to user");
+
+        emit TicketSold(seller, msg.sender, ticketID);
+        safeTransferFrom(seller, msg.sender, ticketID);
+
+        tickets[ticketID].status = TicketStatus.Valid;
+
+        return true;
+
+    }
     
+    /**
+     * @notice Mark ticket as used
+     * @dev Only a valid buyer can mark ticket as used
+     * @param sQRCodeKey QR Code key sent by the app 
+     */
+    function setTicketToUsed(uint ticketID, string memory sQRCodeKey) public requiredStage(Stages.CheckinOpen)
+                                                                    ownsTicket(ticketID) returns (string memory){
+		// Validate that user has a ticket they own and it is valid
+        require(tickets[ticketID].status == TicketStatus.Valid, "There is no valid ticket for this user");
+    
+        // Ticket is valid so mark it as used
+        tickets[ticketID].status = TicketStatus.Used;
+
+        // Burn the Token
+        _burn(ticketID); 
+        
+        // Raise event which Gate Management system can consume then
+        emit TicketUsed(address(this), ticketID, name(), sQRCodeKey);
+        
+        return sQRCodeKey;
+	}
+
+    /**
+     * @notice Mark ticket as used
+     * @dev Only a valid buyer can mark ticket as used
+     * @param ticketID ticket ID of ticket
+     */
+    function setTicketForSale(uint ticketID) public requiredStage(Stages.Active) ownsTicket(ticketID) returns(bool) {
+		// Validate that user has a ticket they own and it is valid
+        require(tickets[ticketID].status != TicketStatus.Used, "Ticket has already been used");
+        
+        // Ticket is valid so mark it as used
+        tickets[ticketID].status = TicketStatus.AvailableForSale;
+        
+        // Raise event which Gate Management system can consume then
+        emit TicketForSale(msg.sender, ticketID);
+        
+        //return ticketID;
+        return true;
+	}
+
+    //  /**
+    //  * @dev get ticket status
+    //  */
+    // function getTicketStatus(uint ticketID) public view returns (TicketStatus) {
+    //     return tickets[ticketID].status;
+    // }
+
     // /**
+    //  * @dev get ticket by ID
+    //  */
+    // function getTicket(uint ticketID) public view returns(uint32 price, uint32 resalePrice, TicketStatus status) {
+    //     price = tickets[ticketID].price;
+    //     resalePrice = tickets[ticketID].resalePrice;
+    //     status = tickets[ticketID].status;
+    // }
+
+    /**
+     * @dev get all tickets 
+     */
+    function getTicketsCreated() public view returns(Ticket [] memory){
+        return tickets;
+    }
+	
+   /**
+     * @notice owner can only withdraw what's in the balances
+     * @dev once the event is cancelled, organizer should refund money to buyers
+     */
+    function ownerWithdraw() public onlyOwner requiredStage(Stages.Closed) {
+        uint ownerBalance = balances[owner];
+        require(ownerBalance > 0, "No money to withdraw");
+        
+        // Call will forwards all available gas
+        (bool sent, ) = msg.sender.call{value:ownerBalance}("");
+        // Failure condition if cannot transfer
+        require(sent, "Failed to send ether to owner");
+        // Update balance after transfering money
+        balances[owner] = 0;
+        emit OwnerWithdrawMoney(msg.sender, ownerBalance);
+    }
+
+    /**
+     * @notice User to withdraw money 
+     * @dev User can withdraw money if event cancelled or overpaid for ticket
+     */
+    function withdraw() public {
+        require(msg.sender != owner, "Can not be executed by the owner");
+        // Amount to send to user
+        uint sendToUser = balances[msg.sender];
+        
+        // If event cancelled, send user the amount they overpaid for ticket + ticket price refund
+        if (isCancelled && isUserRefund[msg.sender] == false ) {
+            sendToUser += balanceOf(msg.sender) * price;
+        }
+
+        // Cannot withdraw if no money to withdraw
+        require(sendToUser > 0, "User does not have money to withdraw");
+        
+        // Transfer money to user
+        address payable receiver = payable(msg.sender);
+        // Call will forwards all available gas
+        (bool sent, ) = receiver.call{value:sendToUser}("");
+        // Failure condition of send will emit this error
+        require(sent, "Failed to send ether to user");
+        // Update balance after transfering money
+        balances[msg.sender] = 0;
+        isUserRefund[msg.sender] = true;
+        emit WithdrawMoney(msg.sender, sendToUser);
+        
+    }
+
+    /**
+     * @dev approve a buyer to buy ticket of another user
+     */
+    function approveAsBuyer(address buyer, uint ticketID) public requiredStage(Stages.Active){
+        require(ownerOf(ticketID) == msg.sender, "no permission");
+        setApprovalForAll(buyer, bool(true));
+        approve(buyer, ticketID);
+    }
+
+    // /**
+    //  * @dev register as buyer
+    //  */
+    // function registerAsBuyer(uint ticketID) public requiredStage(Stages.Active){
+    //     require(registeredBuyers[ticketID] != msg.sender, "You have already registered to buy");
+
+    //     registeredBuyers[ticketID] = msg.sender;
+
+    // }
+
+    // /**
+    //  * @dev get registered buyer
+    //  */
+    // function getRegisteredBuyer(uint ticketID) public view returns(address) {
+    //     return registeredBuyers[ticketID];
+    // }
+
+        // /**
     //  * @notice Change Stage to closed
     //  * @dev Only owner , only able to close in Stages.Cancelled or Stages.CheckinOpen
     //  */
@@ -232,7 +397,7 @@ contract Event is ERC721 {
     //     return stage;
     // }
     
-    /** TODO set to Stage randomly will affect withdraw
+    /** 
      * @notice Change Status
      * @dev Only owner can change state
      * @param _stage Stages as set in enum Stages
@@ -244,176 +409,6 @@ contract Event is ERC721 {
             balances[owner] -= price * tickets.length;
         }
         return stage;
-    }
-    
-    /**
-     * @notice Mark ticket as used
-     * @dev Only a valid buyer can mark ticket as used
-     * @param sQRCodeKey QR Code key sent by the app 
-     */
-    function setTicketToUsed(uint ticketID, string memory sQRCodeKey) public requiredStage(Stages.CheckinOpen)
-                                                                    ownsTicket(ticketID) returns (string memory){
-		// Validate that user has a ticket they own and it is valid
-        require(tickets[ticketID].status == TicketStatus.Valid, "There is no valid ticket for this user");
-    
-        // Ticket is valid so mark it as used
-        tickets[ticketID].status = TicketStatus.Used;
-
-        // Burn the Token
-        _burn(ticketID); 
-        
-        // Raise event which Gate Management system can consume then
-        emit TicketUsed(address(this), ticketID, name(), sQRCodeKey);
-        
-        return sQRCodeKey;
-	}
-
-    /**
-     * @notice Mark ticket as used
-     * @dev Only a valid buyer can mark ticket as used
-     * @param ticketID ticket ID of ticket
-     */
-    function setTicketForSale(uint ticketID) public requiredStage(Stages.Active) ownsTicket(ticketID) returns(bool) {
-		// Validate that user has a ticket they own and it is valid
-        require(tickets[ticketID].status != TicketStatus.Used, "Ticket has already been used");
-        
-        // Ticket is valid so mark it as used
-        tickets[ticketID].status = TicketStatus.AvailableForSale;
-        
-        // Raise event which Gate Management system can consume then
-        emit TicketForSale(msg.sender, ticketID);
-        
-        //return ticketID;
-        return true;
-	}
-
-     /**
-     * @dev get ticket status
-     */
-    function getTicketStatus(uint ticketID) public view returns (TicketStatus) {
-        return tickets[ticketID].status;
-    }
-
-    /**
-     * @dev get ticket by ID
-     */
-    function getTicket(uint ticketID) public view returns(uint32 price, uint32 resalePrice, TicketStatus status) {
-        price = tickets[ticketID].price;
-        resalePrice = tickets[ticketID].resalePrice;
-        status = tickets[ticketID].status;
-    }
-
-    /**
-     * @dev get all tickets 
-     */
-    function getTicketsCreated() public view returns(Ticket [] memory){
-        return tickets;
-    }
-	
-   /**
-     * @notice owner can only withdraw what's in the balances
-     * @dev once the event is cancelled, organizer should refund money to buyers
-     */
-    function ownerWithdraw() public onlyOwner requiredStage(Stages.Closed) {
-        uint ownerBalance = balances[owner];
-        require(ownerBalance > 0, "No money to withdraw");
-        
-        // Call will forwards all available gas
-        (bool sent, ) = msg.sender.call{value:ownerBalance}("");
-        // Failure condition if cannot transfer
-        require(sent, "Failed to send ether to owner");
-        // Update balance after transfering money
-        balances[owner] = 0;
-        emit OwnerWithdrawMoney(msg.sender, ownerBalance);
-    }
-
-    /**
-     * @notice User to withdraw money 
-     * @dev User can withdraw money if event cancelled or overpaid for ticket
-     */
-    function withdraw() public {
-        require(msg.sender != owner, "Can not be executed by the owner");
-        // Amount to send to user
-        uint sendToUser = balances[msg.sender];
-        
-        // If event cancelled, send user the amount they overpaid for ticket + ticket price refund
-        if (isCancelled && isUserRefund[msg.sender] == false ) {
-            sendToUser += balanceOf(msg.sender) * price;
-        }
-
-        // Cannot withdraw if no money to withdraw
-        require(sendToUser > 0, "User does not have money to withdraw");
-        
-        // Transfer money to user
-        address payable receiver = payable(msg.sender);
-        // Call will forwards all available gas
-        (bool sent, ) = receiver.call{value:sendToUser}("");
-        // Failure condition of send will emit this error
-        require(sent, "Failed to send ether to user");
-        // Update balance after transfering money
-        balances[msg.sender] = 0;
-        isUserRefund[msg.sender] = true;
-        emit WithdrawMoney(msg.sender, sendToUser);
-        
-    }
-
-    /**
-     * @dev approve a buyer to buy ticket of another user
-     */
-    function approveAsBuyer(address buyer, uint ticketID) public requiredStage(Stages.Active){
-        require(ownerOf(ticketID) == msg.sender, "no permission");
-        setApprovalForAll(buyer, bool(true));
-        approve(buyer, ticketID);
-    }
-
-    /**
-     * @dev register as buyer
-     */
-    function registerAsBuyer(uint ticketID) public requiredStage(Stages.Active){
-        require(registeredBuyers[ticketID] != msg.sender, "You have already registered to buy");
-
-        registeredBuyers[ticketID] = msg.sender;
-
-    }
-
-    /**
-     * @dev get registered buyer
-     */
-    function getRegisteredBuyer(uint ticketID) public view returns(address) {
-        return registeredBuyers[ticketID];
-    }
-
-    /**
-     * @notice Mark ticket as used
-     * @dev Only a valid buyer can mark ticket as used
-     * @param ticketID ticket ID of ticket
-     */
-    function buyTicketFromUser(uint ticketID) public payable requiredStage(Stages.Active) hasEnoughMoney(msg.value) returns (bool) {
-        // Check if ticket is available for sale
-        require(tickets[ticketID].status == TicketStatus.AvailableForSale, "Ticket not available for sale");
-        //approveAsBuyer(msg.sender, ticketID);
-
-        //calc amount to pay after royalty
-        uint ticketPrice = tickets[ticketID].price;
-        uint royalty = (royaltyPercent/100) * ticketPrice;
-        uint priceToPay = ticketPrice - royalty;
-
-        //transfer money to seller
-        address payable seller = payable(ownerOf(ticketID));
-        ///seller.transfer(priceToPay);
-        // bool sent = seller.send(price);
-        balances[seller] += priceToPay;
-        balances[owner] += royalty;
-
-        // require(sent, "Failed to send ether to user");
-
-        emit TicketSold(seller, msg.sender, ticketID);
-        safeTransferFrom(seller, msg.sender, ticketID);
-
-        tickets[ticketID].status = TicketStatus.Valid;
-
-        return true;
-
     }
 
 

@@ -26,6 +26,23 @@ client = MongoClient(connection_string)
 
 
 ########## EVENT ROUTES ##########
+@APP.route('/resetDatabase', methods=['GET'])
+def resetDatabase_get():
+    '''
+    Delete all records from the two database tables we use
+    '''
+    # Get all events 
+    db = client['project']
+    coll = db['UsedTicket']
+    coll.remove()
+    coll = db['NewTicket']
+    coll.remove()
+    
+    return make_response(
+        'Database cleaned', 
+        200
+    ) 
+    
 @APP.route('/ticket/add', methods=['POST'])
 def newticket_add():
     '''
