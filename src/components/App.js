@@ -587,13 +587,13 @@
             Purchase Tickets
           </Tab>
           <Tab>
+            Secondary Market Tickets
+          </Tab>
+          <Tab>
             My Tickets
           </Tab>
           <Tab>
             My Events
-          </Tab>
-          <Tab>
-            Secondary Tickets
           </Tab>
           <Tab>
             Oracle
@@ -739,6 +739,67 @@
                         </Button>
                       </Box>
                     )
+                ))
+              }
+            </SimpleGrid>
+          </TabPanel>
+          <TabPanel mt="15px" mb="15px" align="center">
+            <Heading mb="25px">Secondary Market Tickets</Heading>
+            <SimpleGrid columns={4} spacing={10} mt="30px">
+              { 
+                secondaryTickets.map((id, index) => (
+                  <Box 
+                    key={index} 
+                    borderRadius="5px"
+                    border="1px solid"
+                    borderColor="gray.200"
+                    p="20px" 
+                    width="20rem"
+                  >
+                    <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px"> Event {id.eventNumber + 1}</Text>
+                    <Text>Event: {id.eventName}</Text>
+                    <Text>ID: {id.ticketID}</Text>
+                    <Text>Owner: {id.owner}</Text>
+                    <Button 
+                    type='submit' 
+                    color={darkGreen}
+                    backgroundColor={lightGreen}
+                    size="lg"
+                    mt="13px"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      registerToBuy(e, id.ticketID, id.eventNumber)
+                    }}
+                    >
+                        Register To Buy
+                    </Button>
+                    <Button 
+                    type='submit' 
+                    color={darkGreen}
+                    backgroundColor={lightGreen}
+                    size="lg"
+                    mt="13px"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      buyTicketFromUser(e, id.owner, id.ticketID, id.eventNumber)
+                    }}
+                    >
+                        Buy Ticket From Owner
+                    </Button>
+                    <Button 
+                    type='submit' 
+                    color={darkGreen}
+                    backgroundColor={lightGreen}
+                    size="lg"
+                    mt="13px"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      approveSale(e, id.ticketID, id.eventNumber)
+                    }}
+                    >
+                        Approve Sale
+                    </Button>
+                  </Box>
                 ))
               }
             </SimpleGrid>
@@ -921,67 +982,6 @@
                   ))
                 }
               </SimpleGrid>
-          </TabPanel>
-          <TabPanel mt="15px" mb="15px" align="center">
-            <Heading mb="25px">Secondary Tickets</Heading>
-            <SimpleGrid columns={4} spacing={10} mt="30px">
-              { 
-                secondaryTickets.map((id, index) => (
-                  <Box 
-                    key={index} 
-                    borderRadius="5px"
-                    border="1px solid"
-                    borderColor="gray.200"
-                    p="20px" 
-                    width="20rem"
-                  >
-                    <Text isTruncated fontWeight="bold" fontSize="xl" mb="7px"> Event {id.eventNumber + 1}</Text>
-                    <Text>Event: {id.eventName}</Text>
-                    <Text>ID: {id.ticketID}</Text>
-                    <Text>Owner: {id.owner}</Text>
-                    <Button 
-                    type='submit' 
-                    color={darkGreen}
-                    backgroundColor={lightGreen}
-                    size="lg"
-                    mt="13px"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      registerToBuy(e, id.ticketID, id.eventNumber)
-                    }}
-                    >
-                        Register To Buy
-                    </Button>
-                    <Button 
-                    type='submit' 
-                    color={darkGreen}
-                    backgroundColor={lightGreen}
-                    size="lg"
-                    mt="13px"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      buyTicketFromUser(e, id.owner, id.ticketID, id.eventNumber)
-                    }}
-                    >
-                        Buy Ticket From Owner
-                    </Button>
-                    <Button 
-                    type='submit' 
-                    color={darkGreen}
-                    backgroundColor={lightGreen}
-                    size="lg"
-                    mt="13px"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      approveSale(e, id.ticketID, id.eventNumber)
-                    }}
-                    >
-                        Approve Sale
-                    </Button>
-                  </Box>
-                ))
-              }
-            </SimpleGrid>
           </TabPanel>
           <TabPanel mt="15px" mb="15px" align="center">
             <Heading mb="25px">Oracle</Heading>
