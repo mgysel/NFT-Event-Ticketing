@@ -913,7 +913,11 @@
               <SimpleGrid columns={4} spacing={10} mt="30px">
                 { 
                   arrQRCode.map((id, index) => (
-                    <Box key={index} border="1px solid black" p="20px" width="20rem">
+                    <Box key={index}                     
+                      borderRadius="5px"
+                      border="1px solid"
+                      borderColor="gray.200" p="20px" width="20rem"
+                    >
                       <Text>Event: {id.eventName}</Text>
                       <Text>Your Personal Entry Key: {id.qrCode}</Text>
                       <Text>Data sent to Entry Management System Successfully</Text>
