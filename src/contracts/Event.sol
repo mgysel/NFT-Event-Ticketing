@@ -215,7 +215,7 @@ contract Event is ERC721 {
      * @dev Only a valid buyer can mark ticket as used
      * @param ticketID ticket ID of ticket
      */
-    function setTicketForSale(uint ticketID, uint resalePrice) public requiredStage(Stages.Active) ownsTicket(ticketID) returns(bool) {
+    function setTicketForSale(uint ticketID, uint32 resalePrice) public requiredStage(Stages.Active) ownsTicket(ticketID) returns(bool) {
 		// Validate that user has a ticket they own and it is valid
         require(tickets[ticketID].status != TicketStatus.Used, "Ticket has already been used");
         require(canBeResold == true, "Ticket cannot be resold");
