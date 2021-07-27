@@ -880,7 +880,7 @@
                           defaultValue={id.stage.toString()}
                         >
                           <Stack spacing={4} direction="column">
-                            <Radio value="0">Prep</Radio>
+                            <Radio value="0" mb="0">Prep</Radio>
                             <Radio value="1">Active</Radio>
                             <Radio value="2">Paused</Radio>
                             <Radio value="3">Checkin Open</Radio>
