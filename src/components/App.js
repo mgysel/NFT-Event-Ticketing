@@ -804,7 +804,7 @@
                           <form>
                             <Input
                               isRequired
-                              id='eventStage'
+                              id='resalePrice'
                               type='number'
                               size="md"
                               placeholder='Set Resale Price'
