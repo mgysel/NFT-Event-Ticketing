@@ -166,7 +166,7 @@ contract Event is ERC721 {
         //approveAsBuyer(msg.sender, ticketID);
 
         //calc amount to pay after royalty
-        uint ticketPrice = tickets[ticketID].price;
+        uint ticketPrice = tickets[ticketID].resalePrice;
         uint royalty = (royaltyPercent/100) * ticketPrice;
         uint priceToPay = ticketPrice - royalty;
 
@@ -215,13 +215,14 @@ contract Event is ERC721 {
      * @dev Only a valid buyer can mark ticket as used
      * @param ticketID ticket ID of ticket
      */
-    function setTicketForSale(uint ticketID) public requiredStage(Stages.Active) ownsTicket(ticketID) returns(bool) {
+    function setTicketForSale(uint ticketID, uint resalePrice) public requiredStage(Stages.Active) ownsTicket(ticketID) returns(bool) {
 		// Validate that user has a ticket they own and it is valid
         require(tickets[ticketID].status != TicketStatus.Used, "Ticket has already been used");
         require(canBeResold == true, "Ticket cannot be resold");
         
         // Ticket is valid so mark it as used
         tickets[ticketID].status = TicketStatus.AvailableForSale;
+        tickets[ticketID].resalePrice = resalePrice;
         
         // Raise event which Gate Management system can consume then
         emit TicketForSale(msg.sender, ticketID);
