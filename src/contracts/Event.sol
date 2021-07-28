@@ -120,7 +120,6 @@ contract Event is ERC721 {
         require(eventSymbolBytes.length != 0, "Event Symbol cannot be empty");
         
         owner = payable(_owner);
-        totalTickets = _numTickets;
         numTicketsLeft = _numTickets;
         price = _price;
         canBeResold = _canBeResold;
