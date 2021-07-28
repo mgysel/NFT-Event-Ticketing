@@ -936,8 +936,11 @@
                       >
                         <RadioGroup 
                           mb="10px"
-                          onChange={setEventStage} 
-                          value={eventStage}
+                          onChange={(e) => {
+                            id.stage = e;
+                            setEventStage(e);
+                          }} 
+                          value={id.stage.toString() == eventStage ? eventStage : id.stage.toString()}
                           defaultValue={id.stage.toString()}
                         >
                           <Stack spacing={4} direction="column">
