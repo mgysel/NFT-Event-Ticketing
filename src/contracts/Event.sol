@@ -20,7 +20,7 @@ contract EventCreator {
      * @param _eventName Name of the Ticket NFT
      * @param _eventSymbol Symbol for the Ticket NFT Token
      */
-    function createEvent(uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
+    function createEvent(uint256 _numTickets, uint128 _price, bool _canBeResold, uint128 _royaltyPercent,
             string memory _eventName, string memory _eventSymbol) external returns(address newEvent) {
 
         // Create a new Event smart contract
@@ -63,21 +63,26 @@ contract Event is ERC721 {
     /// Valid - Ticket is Valid
     /// Used - Ticket is used
     /// AvailableForSale - Ticket is allowed to be sold to someone
-    enum TicketStatus {Valid, Used, AvailableForSale }
+    enum TicketStatus { Valid, Used, AvailableForSale }
     
     // Ticket struct 
     struct Ticket {
-        uint32 price;
-        uint32 resalePrice;
+        uint128 price;
+        uint128 resalePrice;
         TicketStatus status;
     }
-    Ticket[] public tickets;
-    uint32 public numTicketsLeft;
-    uint32 public totalTickets;
-    uint32 public price;
     
-    /// Percent royalty event creator receives from ticket resales
-    uint8 public royaltyPercent;
+    // array to store tickets, index will be ticketID
+    Ticket[] public tickets;
+    
+    // ticket original price
+    uint128 public price;
+    
+    // Percent royalty event creator receives from ticket resales
+    uint128 public royaltyPercent;
+    
+    // number of tickets left to sell
+    uint256 public numTicketsLeft;
     
     // if ticket can be resold in the second market
     bool public canBeResold;
@@ -89,7 +94,6 @@ contract Event is ERC721 {
     address payable public owner;
     
     // to store the balances for buyers and organizers
-    uint totalBalances = 0;
     mapping(address => uint) public balances;
     mapping(address => bool) public isUserRefund;
     mapping(uint => address) public registeredBuyers;
@@ -103,7 +107,7 @@ contract Event is ERC721 {
     event TicketUsed(address contractAddress, uint ticketID, string eventName, string sQRCodeKey);
 
     // Creates a new Event Contract
-    constructor(address _owner, uint32 _numTickets, uint32 _price, bool _canBeResold, uint8 _royaltyPercent,
+    constructor(address _owner, uint256 _numTickets, uint128 _price, bool _canBeResold, uint128 _royaltyPercent,
             string memory _eventName, string memory _eventSymbol) ERC721(_eventName, _eventSymbol) {    
         // Check valid constructor arguments
         require(_royaltyPercent >= 0 && _royaltyPercent <= 100, "Royalty Percentage must be between 0 and 100");
@@ -163,22 +167,22 @@ contract Event is ERC721 {
     function buyTicketFromUser(uint ticketID) public payable requiredStage(Stages.Active) hasEnoughMoney(msg.value) returns (bool) {
         // Check if ticket is available for sale
         require(tickets[ticketID].status == TicketStatus.AvailableForSale, "Ticket not available for sale");
-        //approveAsBuyer(msg.sender, ticketID);
 
-        //calc amount to pay after royalty
+        // calc amount to pay after royalty
         uint ticketPrice = tickets[ticketID].resalePrice;
-        uint royalty = (royaltyPercent/100) * ticketPrice;
+        // store overpaid in balances
+        if (msg.value > ticketPrice) {
+            uint amount = msg.value - ticketPrice;
+            balances[msg.sender] += amount;
+        }
+        uint royalty = (royaltyPercent * ticketPrice) / 100;
         uint priceToPay = ticketPrice - royalty;
 
-        //transfer money to seller
         address payable seller = payable(ownerOf(ticketID));
-        ///seller.transfer(priceToPay);
-        // bool sent = seller.send(price);
+        // store balances for seller and owner to withdraw later
         balances[seller] += priceToPay;
         balances[owner] += royalty;
-
-        // require(sent, "Failed to send ether to user");
-
+        
         emit TicketSold(address(this), name(), msg.sender, ticketID);
         safeTransferFrom(seller, msg.sender, ticketID);
 
@@ -191,6 +195,7 @@ contract Event is ERC721 {
     /**
      * @notice Mark ticket as used
      * @dev Only a valid buyer can mark ticket as used
+     * @param ticketID ticket ID of ticket
      * @param sQRCodeKey QR Code key sent by the app 
      */
     function setTicketToUsed(uint ticketID, string memory sQRCodeKey) public requiredStage(Stages.CheckinOpen)
@@ -214,8 +219,9 @@ contract Event is ERC721 {
      * @notice Mark ticket as used
      * @dev Only a valid buyer can mark ticket as used
      * @param ticketID ticket ID of ticket
+     * @param resalePrice resale price for ticket
      */
-    function setTicketForSale(uint ticketID, uint32 resalePrice) public requiredStage(Stages.Active) ownsTicket(ticketID) returns(bool) {
+    function setTicketForSale(uint ticketID, uint128 resalePrice) public requiredStage(Stages.Active) ownsTicket(ticketID) returns(bool) {
 		// Validate that user has a ticket they own and it is valid
         require(tickets[ticketID].status != TicketStatus.Used, "Ticket has already been used");
         require(canBeResold == true, "Ticket cannot be resold");
@@ -327,7 +333,6 @@ contract Event is ERC721 {
 
 
     // MODIFIERS
-
     // Only owner
     modifier onlyOwner() {
         require(msg.sender == owner, "Can only be executed by the owner");
@@ -351,7 +356,8 @@ contract Event is ERC721 {
         require(numTicketsLeft > 0, "There are 0 tickets left");
         _;
     }
-
+    
+    // Requires user send enough money to smart contract
     modifier hasEnoughMoney(uint money) {
         require(money >= price, "Not enough money to purchase a ticket");
         _;
