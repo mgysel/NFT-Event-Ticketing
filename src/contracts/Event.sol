@@ -242,6 +242,13 @@ contract Event is ERC721 {
     function getTicketsCreated() public view returns(Ticket [] memory){
         return tickets;
     }
+
+    /**
+     * @dev get ticket status
+     */
+    function getTicketStatus(uint ticketID) public view returns (TicketStatus) {
+        return tickets[ticketID].status;
+    }
 	
    /**
      * @notice owner can only withdraw what's in the balances
@@ -251,12 +258,13 @@ contract Event is ERC721 {
         uint ownerBalance = balances[owner];
         require(ownerBalance > 0, "No money to withdraw");
         
+        // Update balance before transfering money
+        balances[owner] = 0;
+
         // Call will forwards all available gas
         (bool sent, ) = msg.sender.call{value:ownerBalance}("");
         // Failure condition if cannot transfer
         require(sent, "Failed to send ether to owner");
-        // Update balance after transfering money
-        balances[owner] = 0;
         emit OwnerWithdrawMoney(msg.sender, ownerBalance);
     }
 
@@ -277,15 +285,16 @@ contract Event is ERC721 {
         // Cannot withdraw if no money to withdraw
         require(sendToUser > 0, "User does not have money to withdraw");
         
+        // Update balance before transfering money
+        balances[msg.sender] = 0;
+        isUserRefund[msg.sender] = true;
+
         // Transfer money to user
         address payable receiver = payable(msg.sender);
         // Call will forwards all available gas
         (bool sent, ) = receiver.call{value:sendToUser}("");
         // Failure condition of send will emit this error
         require(sent, "Failed to send ether to user");
-        // Update balance after transfering money
-        balances[msg.sender] = 0;
-        isUserRefund[msg.sender] = true;
         emit WithdrawMoney(msg.sender, sendToUser);
         
     }
