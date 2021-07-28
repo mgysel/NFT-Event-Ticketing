@@ -289,19 +289,21 @@ contract('Event', (accounts) => {
         it('checking cannot set Ticket For Sale unless Active stage', async () => {
             // Prep (0) Stage
             await event.setStage(0)
-            await event.setTicketForSale(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            let ticketID = 0
+            let ticketPrice = 100
+            await event.setTicketForSale(ticketID, ticketPrice, { from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
             // Paused (1) Stage
             await event.setStage(2)
-            await event.setTicketForSale(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            await event.setTicketForSale(ticketID, ticketPrice, { from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
             // Paused (2) Stage
             await event.setStage(3)
-            await event.setTicketForSale(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            await event.setTicketForSale(ticketID, ticketPrice, { from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
             // Cancelled (4) Stage
             await event.setStage(4)
-            await event.setTicketForSale(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            await event.setTicketForSale(ticketID, ticketPrice, { from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
             // Closed (5) Stage
             await event.setStage(5)
-            await event.setTicketForSale(new BN('1')).should.be.rejectedWith(EVM_REVERT)
+            await event.setTicketForSale(ticketID, ticketPrice, { from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
         })
         beforeEach(async () => {
             // Set stage to Active
@@ -311,7 +313,8 @@ contract('Event', (accounts) => {
         
         it('checking ticket mark as available for sale', async () => {
             let ticketID = 0
-            let e = await event.setTicketForSale(ticketID, { from: buyer1 })
+            let ticketPrice = 100
+            let e = await event.setTicketForSale(ticketID, ticketPrice, { from: buyer1 })
             truffleAssert.eventEmitted(e, 'TicketForSale', (ev) => {
                 let ticketID_expected = '0'
                 let ticketID_actual = ev['ticketID'].toString()
@@ -322,17 +325,19 @@ contract('Event', (accounts) => {
 
         it('confirm ticket available for sale', async() => {
             let ticketID = 0
-            await event.setTicketForSale(ticketID, { from: buyer1 })
+            let ticketPrice = 100
+            await event.setTicketForSale(ticketID, ticketPrice, { from: buyer1 })
             let x = await event.getTicketStatus(ticketID, { from: buyer1 })
             assert.equal(x.valueOf(), 2, 'ticket should be available for sale')
         })
 
         it('checking cannot set for sale if used', async () => {
             let ticketID = 0
+            let ticketPrice = 100
             let sQRCodeKey = "12345"
             await event.setStage(3)
             await event.setTicketToUsed(ticketID, sQRCodeKey, { from: buyer1 })
-            await event.setTicketForSale(ticketID, { from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
+            await event.setTicketForSale(ticketID, ticketPrice, { from: buyer1 }).should.be.rejectedWith(EVM_REVERT)
         })
     })
 
@@ -361,16 +366,18 @@ contract('Event', (accounts) => {
 
         it('set ticket for sale', async () => {
             let ticketID = 0
-            let e = await event.setTicketForSale(ticketID, { from: buyer1 })
+            let ticketPrice = 100
+            let e = await event.setTicketForSale(ticketID, ticketPrice, { from: buyer1 })
             let x = await event.getTicketStatus(ticketID, { from: buyer1 })
             assert.equal(x.valueOf(), 2, 'ticket should be available for sale')
         })
 
         it('buy ticket from buyer 1', async () => {
             let ticketID = 0
-            await event.setTicketForSale(ticketID, { from: buyer1 })
+            let ticketPrice = 100
+            await event.setTicketForSale(ticketID, ticketPrice, { from: buyer1 })
             await event.approveAsBuyer(buyer2, ticketID, { from: buyer1 })
-            let t  = await event.buyTicketFromUser(ticketID, { value: (_price), from: buyer2 })
+            let t  = await event.buyTicketFromUser(ticketID, { value: (ticketPrice), from: buyer2 })
             truffleAssert.eventEmitted(t, 'TicketSold', (ev) => {
                 let seller_expected = buyer1
                 let seller_actual = ev['seller'].toString()
@@ -387,7 +394,8 @@ contract('Event', (accounts) => {
 
         it('ticket should belong to buyer 2', async () => {
             let ticketID = 0
-            await event.setTicketForSale(ticketID, { from: buyer1 })
+            let ticketPrice = 100
+            await event.setTicketForSale(ticketID, ticketPrice, { from: buyer1 })
             await event.approveAsBuyer(buyer2, ticketID, { from: buyer1 })
             await event.buyTicketFromUser(ticketID, { value: (_price), from: buyer2 })
             let newTicketOwner = await event.ownerOf(ticketID)
@@ -400,7 +408,8 @@ contract('Event', (accounts) => {
 
             await event.buyTicket({ value:(_price), from: buyer1 })
             let ticketID = 0
-            await event.setTicketForSale(ticketID, { from: buyer1 })
+            let ticketPrice = 100
+            await event.setTicketForSale(ticketID, ticketPrice, { from: buyer1 })
             await event.approveAsBuyer(buyer2, ticketID, { from: buyer1 })
             await event.buyTicketFromUser(ticketID, { value: (_price), from: buyer2 })
             bal = await event.balanceOf(buyer2, { from: buyer2 })
