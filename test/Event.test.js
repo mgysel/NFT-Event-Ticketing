@@ -379,8 +379,6 @@ contract('Event', (accounts) => {
             await event.approveAsBuyer(buyer2, ticketID, { from: buyer1 })
             let t  = await event.buyTicketFromUser(ticketID, { value: (ticketPrice), from: buyer2 })
             truffleAssert.eventEmitted(t, 'TicketSold', (ev) => {
-                let seller_expected = buyer1
-                let seller_actual = ev['seller'].toString()
 
                 let buyer_expected = buyer2
                 let buyer_actual = ev['buyer'].toString()
@@ -388,7 +386,7 @@ contract('Event', (accounts) => {
                 let ticketID_expected = '0'
                 let ticketID_actual = ev['ticketID'].toString()
 
-                return seller_actual == seller_expected && buyer_actual == buyer_expected && ticketID_actual == ticketID_expected
+                return buyer_actual == buyer_expected && ticketID_actual == ticketID_expected
             })
         })
 
