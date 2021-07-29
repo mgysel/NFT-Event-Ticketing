@@ -766,6 +766,7 @@
                     backgroundColor={lightGreen}
                     size="lg"
                     mt="13px"
+                    width="220px"
                     onClick={(e) => {
                       e.preventDefault()
                       registerToBuy(e, id.ticketID, id.eventNumber)
@@ -779,12 +780,13 @@
                     backgroundColor={lightGreen}
                     size="lg"
                     mt="13px"
+                    width="220px"
                     onClick={(e) => {
                       e.preventDefault()
-                      buyTicketFromUser(e, id.owner, id.ticketID, id.eventNumber)
+                      approveSale(e, id.ticketID, id.eventNumber)
                     }}
                     >
-                        Buy Ticket From Owner
+                        Approve Sale
                     </Button>
                     <Button 
                     type='submit' 
@@ -792,12 +794,13 @@
                     backgroundColor={lightGreen}
                     size="lg"
                     mt="13px"
+                    width="220px"
                     onClick={(e) => {
                       e.preventDefault()
-                      approveSale(e, id.ticketID, id.eventNumber)
+                      buyTicketFromUser(e, id.owner, id.ticketID, id.eventNumber)
                     }}
                     >
-                        Approve Sale
+                        Buy Ticket From Owner
                     </Button>
                   </Box>
                 ))
