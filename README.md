@@ -8,9 +8,13 @@ Download the source code from the [master branch](https://github.com/mgysel/comp
 This system requires Python 3.7.2, Node.js 14.17, and Ganche CLI v6.12.2 or higher. You can install dependencies and run the component applications. 
 This system also requires the application to be run on a web browser with Metamask installed. Metamask must be connected to Ganache on http://localhost:8545.
 
-The blockchain application can be found in the `root` directory. Navigate into this directory, then run the blockchain on Ganche as follows:
+The blockchain application can be found in the `root` directory. Navigate into this directory, then run an Ethereum blockchain on Ganche as follows:
 ```sh
 $ ganache-cli -d 100000000 --allowUnlimitedContractSize
+```
+Next, open a new terminal and deploy the application to Ganache using 
+```sh
+$ truffle deploy --reset
 ```
 
 The backend Flask application can be found in the `backend` directory. Navigate into this directory, then set up and run the application as follows:
