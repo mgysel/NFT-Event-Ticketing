@@ -2,10 +2,6 @@
 
 TicketChain is an NFT event ticketing system that allows event organizers to create events and customers to purchase tickets, all on the Ethereum blockchain.
 
-## Smart Contract Address
-
-The Event.
-
 ## Installation and Dependencies
 Download the source code from the [master branch](https://github.com/mgysel/comp6452-nft).
 
