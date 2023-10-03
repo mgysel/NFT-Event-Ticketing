@@ -11,6 +11,7 @@ import json
 from flask.helpers import make_response
 import pymongo
 from pymongo import MongoClient
+from objects.MongoWrapper import MongoWrapper
 
 
 APP = Flask(__name__)
@@ -18,10 +19,6 @@ APP = Flask(__name__)
 CORS(APP)
 
 APP.config['SECRET_KEY'] = 'your secret key'
-
-# Connect to MongoDB
-connection_string = "mongodb+srv://comp4337:comp4337@cluster0.mzbuz.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
-client = MongoClient(connection_string)
 
 
 
@@ -31,20 +28,20 @@ def resetDatabase_get():
     '''
     Delete all records from the two database tables we use
     '''
-    # Get all events 
-    db = client['project']
-    coll = db['UsedTicket']
+    # Get all events
+    db = MongoWrapper().client['ticket_chain_store']
+    coll = db['usedTicket']
     coll.remove()
-    coll = db['NewTicket']
+    coll = db['newTicket']
     coll.remove()
-    
+
     return make_response(
         'Database cleaned', 
         200
-    ) 
-    
+    )
+
 @APP.route('/ticket/add', methods=['POST'])
-def newticket_add():
+def newTicket_add():
     '''
     Given a smart contract ID, event name, venue, ticket price
     Adds event to database
@@ -56,9 +53,9 @@ def newticket_add():
             return make_response(
                 dumps(
                     {"message": "No contractAddress, eventName, userAddress or ticketId parameters."}
-                ), 
+                ),
                 400
-            ) 
+            )
 
     contract_Address = data['contractAddress']
     event_name = data['eventName']
@@ -67,7 +64,7 @@ def newticket_add():
     print(event_name)
     print(user_Address)
     print(ticket_Id)
-    
+
     code_json = {
         'contract_Address': contract_Address,
         'event_name': event_name,
@@ -75,8 +72,8 @@ def newticket_add():
         'ticket_Id': ticket_Id
     }
 
-    db = client['project']
-    coll = db['NewTicket']
+    db = MongoWrapper().client['ticket_chain_store']
+    coll = db['newTicket']
     coll.insert_one(code_json)
 
     return make_response(
@@ -89,7 +86,7 @@ def newticket_add():
     ) 
 
 @APP.route('/ticket/query', methods=['GET'])
-def newticket_get():
+def newTicket_get():
     '''
     Returns tickets for a user
     '''
@@ -105,10 +102,10 @@ def newticket_get():
     ) 
 
     # Get all events 
-    db = client['project']
-    #coll = db['UsedTicket']
+    db = MongoWrapper().client['ticket_chain_store']
+    #coll = db['usedTicket']
     #coll.remove()
-    coll = db['NewTicket']
+    coll = db['newTicket']
     #coll.remove()
     code_json = coll.find({ 'user_Address': user_Address })
     list_cursor = list(code_json)
@@ -157,8 +154,8 @@ def ticket_update():
         'ticket_Id': ticket_Id
     }
 
-    db = client['project']
-    coll = db['NewTicket']
+    db = MongoWrapper().client['ticket_chain_store']
+    coll = db['newTicket']
     coll.find_one_and_update({ 'ticket_Id': ticket_Id }, { '$set': { 'user_Address' : user_Address } })
 
     return make_response(
@@ -174,8 +171,8 @@ def ticket_update():
 #QR Code Functionality start
 ############################
     
-@APP.route('/usedticket/add', methods=['POST'])
-def usedticket_add():
+@APP.route('/usedTicket/add', methods=['POST'])
+def usedTicket_add():
     '''
     Given a smart contract ID, event name, venue, ticket price
     Adds event to database
@@ -204,8 +201,8 @@ def usedticket_add():
         'qr_code': qr_code
     }
 
-    db = client['project']
-    coll = db['UsedTicket']
+    db = MongoWrapper().client['ticket_chain_store']
+    coll = db['usedTicket']
     coll.insert_one(code_json)
     
     # Remove the record from the other table
@@ -213,7 +210,7 @@ def usedticket_add():
         'contract_Address': contract_Address,
         'ticket_Id': ticket_Id
     }
-    coll = db['NewTicket']
+    coll = db['newTicket']
     coll.remove(code_json)
 
     return make_response(
@@ -226,8 +223,8 @@ def usedticket_add():
     ) 
 
 
-@APP.route('/usedticket/query', methods=['GET'])
-def usedticket_get():
+@APP.route('/usedTicket/query', methods=['GET'])
+def usedTicket_get():
     '''
     Returns True if QR Code is valid, false otherwise
     '''
@@ -237,8 +234,8 @@ def usedticket_get():
     qr_code = request.args.get('qrCode')
     
      # Get all events 
-    db = client['project']
-    coll = db['UsedTicket']
+    db = MongoWrapper().client['ticket_chain_store']
+    coll = db['usedTicket']
     if request.args.get('userAddress') is None:
         return make_response(
                 dumps(

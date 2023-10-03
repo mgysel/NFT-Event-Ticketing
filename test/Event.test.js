@@ -1,13 +1,14 @@
-const { assert, expect } = require('chai')
-const BN = require('bn.js')
-const { contracts_build_directory } = require('../truffle-config')
-const truffleAssert = require('truffle-assertions')
+const { assert, expect } = require('chai');
+const BN = require('bn.js');
+const { contracts_build_directory } = require('../truffle-config');
+const truffleAssert = require('truffle-assertions');
+const web3 = require('web3');
 
 const EVM_REVERT = 'VM Exception while processing transaction: revert'
 
 // Import smart contract using its artifact
-const EventCreator = artifacts.require('./EventCreator')
 const Event = artifacts.require('./Event')
+const EventCreator = artifacts.require('./Event')
 
 // Testing library
 require('chai')
@@ -15,14 +16,12 @@ require('chai')
     .use(require('chai-bn')(BN))
     .should()
 
-
 // NOTE: ETHEREUM STORES BIG NUMBERS THAT JS CANNOT COMPILE,
 // FOLLOW THE describe('comparison') EXAMPLES FOR HOW TO COMPARE NUMBERS
 // accounts - the accounts from Ganache
 // async - to interact with blockchain, must use async calls
-contract('Event', (accounts) => {
+describe('Event', (accounts) => {
     // Variables for creating the Event Contract
-    let eventCreator;
     let event;
     const _numTickets = 5;
     const _price = 50;
@@ -567,7 +566,6 @@ contract('Event', (accounts) => {
                 return money_actual === money_expected && receiver_actual === receiver_expected
             })
         })
-
     })
 
     describe('owner withdraw if event is not cancelled', async () => {
@@ -780,7 +778,7 @@ contract('Event', (accounts) => {
 })
 
 // Event Creator testing
-contract('EventCreator', (accounts) => {
+describe('EventCreator', (accounts) => {
     // Variables for creating the Event Contract
     let eventCreator
     const _numTickets = 5
